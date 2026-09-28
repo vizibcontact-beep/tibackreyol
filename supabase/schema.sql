@@ -189,6 +189,9 @@ grant execute on function public.join_match(text, text, text) to authenticated;
 grant execute on function public.decline_invite(text) to authenticated;
 grant execute on function public.delete_my_account() to authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
+revoke execute on function public.join_match(text, text, text) from anon;
+revoke execute on function public.decline_invite(text) from anon;
+revoke execute on function public.delete_my_account() from anon;
 
 -- ---------- Temps réel ----------
 alter publication supabase_realtime add table
