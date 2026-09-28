@@ -284,7 +284,14 @@ let SESSION=null,UID=null,READY=false,RECOVERY=false;
 let MEP=null,MEPLOADED=false,FRIENDSHIPS=[],MYMATCHES=[],INVITES=[],TOP=[],PCACHE={},PFETCH={};
 let MYREPORTS=[],ALLREPORTS=[],MYDAILY=null,MYDAILY_LOADED=false,EARNED=null;
 let CURRENT=null,PENDING_CODE=null,AWARDING={},CELEBRATED={};
-{const h=(location.hash||'').replace('#','').toUpperCase();if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;}
+{const h=(location.hash||'').replace('#','').toUpperCase();if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;
+ else{try{const k=localStorage.getItem('tibac_pending');if(k&&/^[A-Z0-9]{5}$/.test(k))PENDING_CODE=k;}catch(e){}}}
+const URLAUTH=location.hash+location.search;
+const FROM_EMAIL=/access_token=|type=signup|type=email|type=magiclink/.test(URLAUTH);
+const LINK_ERROR=/error_code=|error_description=/.test(URLAUTH)?(/expired/i.test(decodeURIComponent(URLAUTH))?'Ce lien a expiré. Connecte-toi ou demande un nouvel e-mail.':'Ce lien n\'est plus valable. Connecte-toi avec ton e-mail et ton mot de passe.'):null;
+let WELCOMED=false;
+function rememberPending(){try{if(PENDING_CODE)localStorage.setItem('tibac_pending',PENDING_CODE);}catch(e){}}
+function forgetPending(){try{localStorage.removeItem('tibac_pending');}catch(e){}}
 
 const hasProfile=()=>!!(MEP&&MEP.pseudo);
 const myPseudo=()=>(MEP&&MEP.pseudo)||'Joueur';
@@ -360,6 +367,12 @@ async function onSession(session){
   SESSION=session;const newUid=session?session.user.id:null;
   if(newUid!==UID){UID=newUid;MEP=null;MEPLOADED=false;MYDAILY_LOADED=false;EARNED=null;await loadAll();}
   READY=true;paintPill();renderTabs();
+  if(session&&!WELCOMED&&(FROM_EMAIL||JUST_VERIFIED)){
+    WELCOMED=true;JUST_VERIFIED=false;
+    if(FROM_EMAIL)history.replaceState(null,'',location.pathname);
+    if(!hasProfile()){tab='compte';toast('Adresse confirmée, tu es connecté·e ! Choisis maintenant ton pseudo.');}
+    else toast(`Bon retour, ${myPseudo()} !`);
+  }
   if(!PLAYING&&!CURRENT&&!SUMMARY)go(tab);
   handlePending();
 }
@@ -370,6 +383,7 @@ async function onSession(session){
     if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='USER_UPDATED')onSession(session);
   });
   const {data}=await SB.auth.getSession();
+  if(LINK_ERROR&&!data.session){history.replaceState(null,'',location.pathname);tab='compte';setTimeout(()=>toast(LINK_ERROR),300);}
   await onSession(data.session);
   subscribeRealtime();
 })();
@@ -386,7 +400,7 @@ function refreshAll(){
 async function handlePending(){
   if(!PENDING_CODE||!READY||!SB)return;
   if(!SESSION||!hasProfile()){if(tab!=='compte')go('compte');return;}
-  const code=PENDING_CODE;PENDING_CODE=null;history.replaceState(null,'',location.pathname);
+  const code=PENDING_CODE;PENDING_CODE=null;forgetPending();history.replaceState(null,'',location.pathname);
   try{const r=await joinMatch(code);if(r){go('enligne');const e=byId('jerr');if(e)e.textContent=r;}else openMatch(code);}catch(e){go('enligne');}
 }
 function needAuth(){
@@ -464,9 +478,10 @@ function showLogin(){
     if(pw.length<(signup?8:1)){msg.className='bad';msg.textContent=signup?'Le mot de passe doit faire au moins 8 caractères.':'Saisis ton mot de passe.';return;}
     byId('authgo').disabled=true;msg.className='muted';msg.textContent='Un instant…';
     if(signup){
-      const {data,error}=await SB.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname+(PENDING_CODE?'#'+PENDING_CODE:'')}});
+      rememberPending();
+      const {data,error}=await SB.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});
       if(error){msg.className='bad';msg.textContent=authMsg(error);byId('authgo').disabled=false;return;}
-      if(!data.session){msg.className='ok';msg.textContent='Compte créé ! Ouvre l\'e-mail de confirmation que tu viens de recevoir, puis reviens te connecter.';}
+      if(!data.session){showVerify(em);}
     }else{
       const {error}=await SB.auth.signInWithPassword({email:em,password:pw});
       if(error){msg.className='bad';msg.textContent=authMsg(error);byId('authgo').disabled=false;}
@@ -477,6 +492,31 @@ function showLogin(){
     const {error}=await SB.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
     msg.className=error?'bad':'ok';msg.textContent=error?authMsg(error):'Si un compte existe avec cette adresse, un e-mail pour choisir un nouveau mot de passe vient d\'être envoyé.';
   };
+}
+let JUST_VERIFIED=false;
+function showVerify(em){
+  $app.innerHTML=`<section class="panel"><h2>Confirme ton adresse</h2>
+    <p class="muted">Un e-mail vient d'être envoyé à <b id="vem"></b>. Regarde aussi dans les spams.</p>
+    <p><b>Solution 1 :</b> clique sur le lien de l'e-mail. Tu seras connecté·e automatiquement.</p>
+    <form id="otpf" class="panel" style="padding:0;border:0;background:none" autocomplete="off">
+      <label class="fld"><span><b>Solution 2 :</b> si l'e-mail contient un code, tape-le ici et reste dans l'appli.</span><input type="text" id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" class="code"></label>
+      <button class="btn wide" type="submit" id="otpgo">Valider le code</button>
+      <p id="omsg" aria-live="polite"></p>
+    </form>
+    <div class="row"><button class="btn ghost sm" id="resend" type="button">Renvoyer l'e-mail</button><button class="btn ghost sm" id="golog" type="button">J'ai confirmé, me connecter</button></div>
+  </section>`;
+  byId('vem').textContent=em;
+  const m=byId('omsg');
+  byId('otpf').onsubmit=async e=>{e.preventDefault();const t=byId('otp').value.replace(/\s/g,'');
+    if(!/^\d{6,10}$/.test(t)){m.className='bad';m.textContent='Le code est composé de chiffres.';return;}
+    byId('otpgo').disabled=true;m.className='muted';m.textContent='Vérification…';
+    let r=await SB.auth.verifyOtp({email:em,token:t,type:'signup'});
+    if(r.error)r=await SB.auth.verifyOtp({email:em,token:t,type:'email'});
+    if(r.error){m.className='bad';m.textContent=/expired/i.test(r.error.message)?'Ce code a expiré : demande un nouvel e-mail.':'Code incorrect. Vérifie-le et réessaie.';byId('otpgo').disabled=false;return;}
+    JUST_VERIFIED=true;WELCOMED=false;};
+  byId('resend').onclick=async function(){this.disabled=true;const {error}=await SB.auth.resend({type:'signup',email:em,options:{emailRedirectTo:location.origin+location.pathname}});
+    m.className=error?'bad':'ok';m.textContent=error?authMsg(error):'Nouvel e-mail envoyé.';setTimeout(()=>{this.disabled=false;},30000);};
+  byId('golog').onclick=()=>{AUTHMODE='login';showLogin();const e2=byId('em');if(e2)e2.value=em;};
 }
 function authMsg(e){
   const m=String(e&&e.message||'').toLowerCase();
