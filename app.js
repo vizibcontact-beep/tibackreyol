@@ -334,7 +334,7 @@ async function loadMatches(){
     const codes=ms.map(m=>m.code);let plays=[];
     if(codes.length)plays=await q(SB.from('plays').select('code,user_id,r,score,found_count').in('code',codes));
     ms.forEach(m=>{m.progress={};plays.filter(p=>p.code===m.code).forEach(p=>{m.progress[p.user_id]={r:p.r,score:p.score,count:p.found_count};});});
-    MYMATCHES=ms;
+    MYMATCHES=ms.filter(m=>!(m.hidden||[]).includes(UID));
   }catch(e){}
 }
 async function loadTop(){try{TOP=(await q(SB.from('profiles').select('id,pseudo,avatar,xp').order('xp',{ascending:false}).limit(200))).map(withUid);TOP.forEach(p=>PCACHE[p.uid]=p);}catch(e){}}
@@ -690,7 +690,7 @@ function showOnline(){
     <div class="entry"><input type="text" class="code" id="jc" maxlength="5" placeholder="CODE" autocapitalize="characters"><button class="btn" id="join" type="button">Rejoindre</button></div>
     <p class="bad" id="jerr" aria-live="polite"></p>
   </section>
-  <section class="panel"><h3>Mes parties</h3><div class="mlist" id="mlist"></div></section>`;
+  <section class="panel"><h3>Mes parties</h3><div class="mlist" id="mlist"></div><p class="foot" id="mhint" style="text-align:left" hidden>Appui long sur une partie pour la supprimer.</p></section>`;
   let mode='live',dur=settings.dur,np=2;const picked=new Set();
   const desc={live:'Vous jouez les manches ensemble : la partie démarre quand le créateur la lance, puis chaque manche s\'ouvre quand tout le monde a fini la précédente.',async:'Chacun joue ses 5 manches quand il veut. Le classement final s\'affiche quand tout le monde a terminé.'};
   const md=byId('mdesc');md.textContent=desc[mode];
@@ -730,7 +730,7 @@ function myResult(ranked){
 }
 function matchStatus(m){
   const ps=m.players||[],me=progOf(m,UID),maxp=m.max_players||2,others=ps.filter(x=>x!==UID);
-  const done=m.started&&ps.length>=2&&ps.every(u=>progOf(m,u).r>=ROUNDS);
+  const done=m.started&&ps.length>=1&&ps.every(u=>progOf(m,u).r>=ROUNDS);
   if(done){const r=rankList(ps.map(u=>({id:u,score:progOf(m,u).score,count:progOf(m,u).count||0})));const mine=r.find(x=>x.id===UID);const top=r.filter(x=>x.rank===1).length;
     return {k:'done',txt:mine.rank===1?(top>1?'Égalité en tête':'Gagnée'):`${mine.rank}${mine.rank===1?'re':'e'} place`};}
   if(!m.started&&m.mode==='live')return {k:'wait',txt:`Salle d'attente · ${ps.length}/${maxp}`};
@@ -751,7 +751,52 @@ function renderMatchList(){
     return `<button class="mitem" type="button" data-code="${esc(m.code)}"><span class="t1">avec ${esc(names)}<span class="badge b-${st.k}">${st.txt}</span></span>
     <span class="sc2">${a.score}${best!==null?`<small class="muted" style="display:block;font-size:11px">meilleur adv. ${best}</small>`:''}</span>
     <span class="t2">${m.mode==='live'?'En direct':'En différé'} · ${(m.players||[]).length}/${m.max_players||2} joueurs${m.terr&&m.terr.length?' · '+esc(m.terr.map(x=>TERR_NAME[x]).join(', ')):''} · code ${esc(m.code)} · manche ${Math.min(a.r+1,ROUNDS)}/${ROUNDS}</span></button>`;}).join('');
-  el.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>openMatch(b.dataset.code));
+  el.querySelectorAll('[data-code]').forEach(b=>bindLongPress(b,()=>matchSheet(MYMATCHES.find(m=>m.code===b.dataset.code)),()=>openMatch(b.dataset.code)));
+  const h=byId('mhint');if(h)h.hidden=false;
+}
+/* ---------- Supprimer une partie (appui long) ---------- */
+function bindLongPress(el,onLong,onTap){
+  let t=null,sx=0,sy=0,fired=false;
+  const clear=()=>{clearTimeout(t);t=null;el.classList.remove('pressing');};
+  const long=()=>{fired=true;clear();try{navigator.vibrate&&navigator.vibrate(25);}catch(e){}onLong();};
+  el.addEventListener('pointerdown',e=>{if(e.button>0)return;fired=false;sx=e.clientX;sy=e.clientY;el.classList.add('pressing');t=setTimeout(long,550);});
+  el.addEventListener('pointermove',e=>{if(t&&(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10))clear();});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,clear));
+  el.addEventListener('contextmenu',e=>{e.preventDefault();if(!fired)long();});
+  el.addEventListener('click',e=>{if(fired){e.preventDefault();fired=false;return;}onTap();});
+  el.addEventListener('keydown',e=>{if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();onLong();}});
+}
+function leaveKind(m){
+  const ps=m.players||[];
+  if(ps.length<=1)return 'delete';
+  if(m.started&&ps.every(u=>progOf(m,u).r>=ROUNDS))return 'hide';
+  return 'abandon';
+}
+function matchSheet(m){
+  if(!m)return;
+  const k=leaveKind(m),others=(m.players||[]).filter(x=>x!==UID).map(u=>(m.pseudos||{})[u]||'Joueur');
+  const T={
+    delete:['Supprimer la partie',`La partie ${m.code} et tes manches seront supprimées définitivement.${(m.invites||[]).length?' Les invitations envoyées seront annulées.':''}`,'Supprimer'],
+    hide:['Retirer de ma liste','La partie disparaît de ta liste. Tes points, tes victoires et ton classement sont conservés.','Retirer'],
+    abandon:['Abandonner la partie',`La partie est en cours avec ${others.join(', ')}. Tes manches seront retirées et les autres joueurs continueront sans toi. Tu ne recevras pas de bonus de fin de partie.`,'Abandonner']
+  }[k];
+  const bg=document.createElement('div');bg.className='sheet-bg';
+  bg.innerHTML=`<section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-t"><h2 id="sheet-t">${esc(T[0])}</h2><p class="muted">${esc(T[1])}</p>
+    <div class="row"><button class="btn red grow" id="sheet-ok" type="button">${esc(T[2])}</button><button class="btn ghost grow" id="sheet-no" type="button">Annuler</button></div><p class="bad" id="sheet-err" aria-live="polite"></p></section>`;
+  document.body.appendChild(bg);
+  const close=()=>{bg.remove();document.removeEventListener('keydown',esc_);};
+  const esc_=e=>{if(e.key==='Escape')close();};
+  document.addEventListener('keydown',esc_);
+  bg.addEventListener('click',e=>{if(e.target===bg)close();});
+  byId('sheet-no').onclick=close;byId('sheet-no').focus();
+  byId('sheet-ok').onclick=async function(){
+    this.disabled=true;
+    try{const r=await q(SB.rpc('leave_match',{p_code:m.code}));if(r){byId('sheet-err').textContent=r;this.disabled=false;return;}
+      close();MYMATCHES=MYMATCHES.filter(x=>x.code!==m.code);renderMatchList();
+      toast(k==='abandon'?'Tu as quitté la partie.':k==='hide'?'Partie retirée de ta liste.':'Partie supprimée.');
+      await loadMatches();await loadInvites();renderTabs();renderMatchList();}
+    catch(e){byId('sheet-err').textContent=dbMsg(e);this.disabled=false;}
+  };
 }
 function shareText(code){return `Viens jouer avec moi à Ti Bac Kréyol ! Code de la partie : ${code} — ${shareLink(code)}`;}
 function renderMatch(code,M,P){
@@ -760,7 +805,7 @@ function renderMatch(code,M,P){
   const players=M.players.map(u=>{const p=P[u]||{rounds:{}};return {id:u,name:(M.pseudos||{})[u]||'Joueur',av:(M.avatars||{})[u]||'zonbi',r:Object.keys(p.rounds||{}).length,score:sumPts(p),count:countFound(p),p};});
   const me=players.find(x=>x.id===UID)||{r:0,score:0,count:0,p:{rounds:{}}},others=players.filter(x=>x.id!==UID);
   const myR=me.r,mine=me.p;
-  const finished=M.started&&players.length>=2&&players.every(x=>x.r>=ROUNDS);
+  const finished=M.started&&players.length>=1&&players.every(x=>x.r>=ROUNDS);
   const ranked=rankList(players);
   const hostName=(M.pseudos||{})[M.host]||'le créateur';
   let action='';
@@ -1081,7 +1126,7 @@ function showRules(){
     ${[['AN','Communs aux Antilles et à la Guyane'],...TERRS].map(([k,n])=>{const list=activeThemes(null).filter(i=>THEMES[i].terr===k);return list.length?`<h5 class="tgh">${esc(n)} · ${list.length}</h5><div class="themes">${list.map(i=>`<span>${esc(THEMES[i].t)}</span>`).join('')}</div>`:'';}).join('')}</section>
   <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Certaines graphies créoles courantes sont acceptées (par exemple Foyal, zandoli, konpè Lapen).</p></section>
   <section><span class="art">ARTICLE 5</span><h4>Jokers</h4><ul><li>+15 secondes : prolonge une manche de 15 secondes. Un seul par partie.</li><li>Indice : affiche les deux premières lettres et la longueur d'une réponse non trouvée. Deux par partie.</li></ul></section>
-  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
+  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Appui long sur une partie dans « Mes parties » pour la supprimer. Une partie terminée est seulement retirée de ta liste (tes points sont conservés). Si la partie est en cours, tu l'abandonnes : tes manches sont retirées et les autres joueurs continuent sans toi. Si un seul joueur reste, il termine seul.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
   <section><span class="art">ARTICLE 7</span><h4>Fin de partie et égalité</h4><p>Les joueurs sont classés selon leur total de points à l'issue des ${ROUNDS} manches. En cas d'égalité de points, le joueur qui a trouvé le plus de réponses passe devant. Si l'égalité persiste, les joueurs partagent la même place. Bonus de classement : ${XP_WIN} points pour le vainqueur, ${XP_TIE} points en cas de première place partagée, ${XP_PLAY} points pour les autres participants.</p></section>
   <section><span class="art">ARTICLE 8</span><h4>Profil, pseudo et amis</h4><ul><li>Pour jouer en ligne, chaque joueur crée un compte gratuit (adresse e-mail et mot de passe), puis un profil avec un pseudo unique et un personnage des contes créoles.</li><li>Le pseudo doit rester correct : pas d'insulte, pas d'usurpation d'identité. L'éditeur peut modifier ou supprimer un pseudo inapproprié.</li><li>On ajoute un ami en saisissant son pseudo. L'amitié est confirmée quand l'autre joueur accepte la demande.</li></ul></section>
   <section><span class="art">ARTICLE 9</span><h4>Classement et niveaux</h4><ul><li>Seules les parties en ligne comptent pour le classement.</li><li>Points de classement : tous les points marqués en ligne, plus ${XP_WIN} points par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</li><li>Deux classements : entre amis, et mondial (tous les joueurs).</li><li>Niveaux : ${LEVELS.map(([m,n])=>`${n} (${m})`).join(', ')}.</li></ul></section>
