@@ -9,6 +9,6 @@
 // Ne mets JAMAIS ici la clé « service_role ».
 // ------------------------------------------------------------
 window.TIBAC_CONFIG = {
-  SUPABASE_URL: 'https://VOTRE-PROJET.supabase.co',
-  SUPABASE_ANON_KEY: 'VOTRE-CLE-ANON'
+  SUPABASE_URL: 'https://iifkrariywwmewwjbhqs.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_NpfbDcNn-tsCbZqDSItqcA_SsGGol3I'
 };
