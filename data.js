@@ -319,3 +319,44 @@ T('MQ',"Produits locaux de Martinique",["Rhum","Banane","Ananas","Canne à sucre
  "*Miel","*Café|cafe","*Vanille","*Confiture","*Poterie","*Bakoua","*Punch",
  "**Doucelette","**Vesou"],
  ["Le sirop de batterie est un sirop épais obtenu en cuisant longuement le jus de canne."]);
+
+/* ---------- Corrections et ajouts d'après les sources officielles (28/09/2026) ----------
+   INSEE (communes), DEAL Martinique (rivières), Comité martiniquais du tourisme (plages, pitons, musées),
+   DAC Martinique / ministère de la Culture (monuments historiques), Ville de Fort-de-France (quartiers),
+   DAAF Martinique (distilleries AOC), UICN France (espèces endémiques). Détail dans le fichier de relecture. */
+function fixAns(title,from,to){const t=THEMES.find(x=>x.t===title);const i=t?t.a.indexOf(from):-1;if(i>=0)t.a[i]=to;}
+function addAns(title,list){const t=THEMES.find(x=>x.t===title);if(t)t.a.push(...list);}
+
+fixAns("Les communes de Martinique","*Le Gros-Morne","*Gros-Morne|le gros morne");
+fixAns("Les communes de Martinique","**Ajoupa-Bouillon","**L'Ajoupa-Bouillon|ajoupa bouillon");
+
+addAns("Rivières de Martinique",["*Rivière Roche|roche","**Rivière Desroses|desroses","**Rivière Claire|claire","**Rivière de Fond Bourlet|fond bourlet","**Rivière de l'Anse Céron|anse ceron"]);
+
+fixAns("Plages de Martinique","Les Salines|grande anse des salines","Les Salines|grande anse des salines,anse des salines,petite anse des salines,grande terre des salines");
+
+fixAns("Monuments et bâtiments historiques de Martinique","*Moulin de Val d'Or|val d or","*Habitation Val d'Or|val d or,moulin de val d or");
+fixAns("Monuments et bâtiments historiques de Martinique","*Théâtre municipal de Fort-de-France|theatre municipal","*Théâtre Aimé Césaire|theatre municipal,theatre municipal de fort de france,ancien hotel de ville,hotel de ville de fort de france");
+fixAns("Monuments et bâtiments historiques de Martinique","**Cathédrale du Mouillage|mouillage","**Cathédrale du Mouillage|mouillage,cathedrale notre dame de l assomption,notre dame de l assomption");
+fixAns("Monuments et bâtiments historiques de Martinique","Château Dubuc|dubuc","Château Dubuc|dubuc,habitation la caravelle");
+fixAns("Monuments et bâtiments historiques de Martinique","*Habitation Saint-Étienne|saint etienne","*Habitation Saint-Étienne|saint etienne,distillerie saint etienne");
+addAns("Monuments et bâtiments historiques de Martinique",["*Habitation Leyritz|leyritz","*Habitation Pécoul|pecoul","*Fontaine Gueydon|gueydon","*Église du Fort|eglise du fort","*Maison Aimé Césaire|maison cesaire","*Statue de l'impératrice Joséphine|statue de josephine,imperatrice josephine","*Marché couvert de Saint-Pierre|marche de saint pierre","*Hôtel de préfecture|prefecture",
+ "**Habitation Beauséjour|beausejour","**Fort d'Alet|alet","**Tombeau de la Dame Espagnole|dame espagnole","**Observatoire du Morne des Cadets|morne des cadets","**Château Aubéry|aubery","**Phare de la Pointe des Nègres|phare pointe des negres","**Maison coloniale de santé|maison coloniale","**Habitation Perrinelle|perrinelle","**Habitation Saint-Jacques|saint jacques","**Bassin de radoub|radoub","**Hôpital militaire de Fort-de-France|hopital militaire","**Lycée Schœlcher|lycee schoelcher","**Villa Monplaisir|monplaisir"]);
+
+addAns("Musées et lieux culturels de Martinique",["*Muséum d'histoire naturelle|museum","*Musée historique de Saint-Pierre|musee de saint pierre","*Maison du volcan|volcan","**Galerie d'histoire et de la mer|galerie de la mer","**Musée des figurines végétales|figurines vegetales","**Musée de la pêche|peche","**Maison du Bagnard|bagnard","**Musée du château Dubuc|chateau dubuc"]);
+
+fixAns("Quartiers de Fort-de-France","*Bord de Canal|bo kannal,canal alaric","*Bord de Canal|bo kannal,canal alaric,bord canal");
+fixAns("Quartiers de Fort-de-France","*Citron","*Citron|trenelle citron");
+fixAns("Quartiers de Fort-de-France","Bellevue","Bellevue|langellier bellevue");
+addAns("Quartiers de Fort-de-France",["*Renéville|reneville","*Pointe de la Vierge|pointe vierge","*Morne Calebasse|calebasse","*Hauts du Port|les hauts du port","*Fond d'Or|fond d or","*Montgérald|montgerald","*Bon Air",
+ "**Crozanville","**La Meynard|meynard","**Voix de Ville|voix de ville","**Langellier","**Pont de Chaînes|pont de chaine","**Ravine Bouillé|ravine bouille","**Bas Maternité|bas maternite","**La Folie","**Baie des Tourelles|tourelles","**Fonds Sinistrés|fond sinistre","**Toquade","**Morne Morissot|morissot"]);
+
+addAns("Marques de rhum de Martinique",["**Héritiers Madkaud|madkaud"]);
+
+fixAns("Espèces endémiques des Antilles","Matoutou falaise|matoutou","Matoutou falaise|matoutou,mygale de martinique,caribena versicolor,avicularia versicolor");
+fixAns("Espèces endémiques des Antilles","*Couresse de la Martinique|couresse","*Couresse de la Martinique|couresse,couleuvre de martinique,liophis cursor");
+fixAns("Espèces endémiques des Antilles","*Hylode de la Martinique|hylode","*Hylode de la Martinique|hylode,rainette de martinique,eleutherodactylus martinicensis");
+fixAns("Espèces endémiques des Antilles","Oriole de Martinique|carouge","Oriole de Martinique|carouge,oriole,icterus bonana");
+addAns("Espèces endémiques des Antilles",["**Dynaste de Martinique|dynaste,scieur de long"]);
+
+fixAns("Mornes, pitons et montagnes de Martinique","*Piton Lacroix|lacroix","*Piton Lacroix|lacroix,morne pavillon");
+addAns("Mornes, pitons et montagnes de Martinique",["*Morne Piquet|piquet"]);
