@@ -185,3 +185,6 @@ select{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--
 input[type=password]{width:100%;font:inherit;font-size:17px;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px 14px;outline:none}
 input[type=password]:focus{border-color:var(--gold)}
 .sel{user-select:all;font-weight:700}
+.sep{height:1px;background:var(--line);margin-block:4px}
+.tgh{margin:8px 0 0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.prose .rules{margin-block:4px}

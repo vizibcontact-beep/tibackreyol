@@ -169,13 +169,8 @@ let G=null,PLAYING=false,SUMMARY=false;
 function showSetup(){
   $app.innerHTML=`
   <section class="panel">
-    <h2>Le petit bac 100 % Matinik</h2>
-    <p class="muted">5 manches, un thème par manche. Tape un maximum de réponses avant la fin du chrono. Les réponses rares rapportent plus.</p>
-    <div class="rules">
-      <div class="rule"><b>${ptsLabel(1)} Classique</b><span>Fort-de-France, mangue, colombo…</span></div>
-      <div class="rule"><b>${ptsLabel(2)} Rare</b><span>Case-Pilote, quénette, souskaï…</span></div>
-      <div class="rule"><b>${ptsLabel(3)} Très rare</b><span>Macouba, icaque, Kolo Barst…</span></div>
-    </div>
+    <h2>Le petit bac 100 % Antillais</h2>
+    <p class="muted">5 manches, un thème par manche. Tape un maximum de réponses avant la fin du chrono. Le barème et la liste des thèmes sont dans l'onglet Règlement.</p>
   </section>
   <section class="panel">
     <h3>Partie sur ce téléphone</h3>
@@ -195,24 +190,18 @@ function showSetup(){
     <div class="row"><button class="btn ghost sm" id="snd" type="button">${settings.sound?'Sons : activés':'Sons : coupés'}</button></div>
     <button class="btn wide" id="go" type="button">Lancer la partie</button>
     <p class="foot">Les parties sur un même téléphone ne comptent pas pour le classement.</p>
+    <div class="sep" role="separator"></div>
+    <h3>Jouer à distance</h3>
+    <p class="muted">Défie un ami sur son propre téléphone, en direct ou chacun à son rythme, et grimpe au classement.</p>
+    <div class="row"><button class="btn ghost grow" id="toOnline" type="button">En ligne</button><button class="btn ghost grow" id="toFriends" type="button">Mes amis</button></div>
   </section>
   <section class="panel">
     <h3>Défi du jour</h3>
     <p class="muted">Un nouveau thème chaque jour, le même pour tout le monde, avec son classement et son proverbe créole.</p>
     <button class="btn ghost" id="toDaily" type="button">Relever le défi du jour</button>
   </section>
-  <section class="panel">
-    <h3>Jouer à distance</h3>
-    <p class="muted">Défie un ami sur son propre téléphone, en direct ou chacun à son rythme, et grimpe au classement.</p>
-    <div class="row"><button class="btn ghost grow" id="toOnline" type="button">En ligne</button><button class="btn ghost grow" id="toFriends" type="button">Mes amis</button></div>
-  </section>
-  ${installPanel()}
-  <section class="panel">
-    <h3>Les thèmes de ta sélection</h3>
-    <div class="themes" id="tlist"></div>
-  </section>`;
-  const paintThemes=()=>{const act=activeThemes(settings.terr);byId('tcount').textContent=`${act.length} thèmes : ceux des territoires choisis, plus les thèmes communs aux Antilles et à la Guyane.`;
-    byId('tlist').innerHTML=act.map(i=>`<span>${esc(THEMES[i].t)}${THEMES[i].terr!=='AN'?` <b class="tg">${esc(TERR_NAME[THEMES[i].terr])}</b>`:''}</span>`).join('');};
+  ${installPanel()}`;
+  const paintThemes=()=>{const act=activeThemes(settings.terr);byId('tcount').textContent=`${act.length} thèmes : ceux des territoires choisis, plus les thèmes communs aux Antilles et à la Guyane.`;};
   paintThemes();bindTerr(paintThemes);
   byId('snd').onclick=function(){settings.sound=!settings.sound;saveSettings();this.textContent=settings.sound?'Sons : activés':'Sons : coupés';if(settings.sound)SFX.good(1);};
   const readNames=()=>{settings.names[0]=(byId('n0').value.trim()||'Joueur 1');const n1=byId('n1');if(n1)settings.names[1]=n1.value.trim()||'Joueur 2';};
@@ -1007,7 +996,14 @@ function showRules(){
   $app.innerHTML=`<section class="panel"><h2>Règlement du jeu</h2><div class="prose">
   <section><span class="art">ARTICLE 1</span><h4>Objet</h4><p>Ti Bac Kréyol est un jeu de listes sur la culture de la Martinique et des Antilles. Le but est de citer, pour chaque thème, le plus grand nombre de réponses correctes avant la fin du temps imparti.</p></section>
   <section><span class="art">ARTICLE 2</span><h4>Déroulement d'une partie</h4><ul><li>Une partie compte ${ROUNDS} manches.</li><li>Avant la partie, on choisit un ou plusieurs territoires : Martinique, Guadeloupe, Guyane, Saint-Martin, Saint-Barthélemy.</li><li>Chaque manche porte sur un thème tiré au sort parmi ceux des territoires choisis et les thèmes communs aux Antilles et à la Guyane (${activeThemes(null).length} thèmes en tout). Un thème n'apparaît qu'une fois par partie.</li><li>La durée d'une manche est de 45, 60 ou 90 secondes, choisie à la création de la partie.</li><li>La manche s'arrête à la fin du chrono, quand toutes les réponses ont été trouvées, ou quand le joueur choisit de la terminer.</li></ul></section>
-  <section><span class="art">ARTICLE 3</span><h4>Barème</h4><ul><li>Réponse classique : 1 point.</li><li>Réponse rare : 2 points.</li><li>Réponse très rare : 3 points.</li><li>Une réponse déjà trouvée ou absente de la liste ne rapporte rien et n'enlève aucun point.</li></ul></section>
+  <section><span class="art">ARTICLE 3</span><h4>Barème</h4><p>Les réponses rares rapportent plus.</p>
+    <div class="rules">
+      <div class="rule"><b>${ptsLabel(1)} Classique</b><span>Fort-de-France, mangue, colombo…</span></div>
+      <div class="rule"><b>${ptsLabel(2)} Rare</b><span>Case-Pilote, quénette, souskaï…</span></div>
+      <div class="rule"><b>${ptsLabel(3)} Très rare</b><span>Macouba, icaque, Kolo Barst…</span></div>
+    </div><ul><li>Réponse classique : 1 point.</li><li>Réponse rare : 2 points.</li><li>Réponse très rare : 3 points.</li><li>Une réponse déjà trouvée ou absente de la liste ne rapporte rien et n'enlève aucun point.</li></ul></section>
+  <section><span class="art">ARTICLE 3 BIS</span><h4>Les thèmes</h4><p>${activeThemes(null).length} thèmes, classés par territoire. Au moment de lancer une partie, le jeu tire au sort parmi les thèmes des territoires choisis et les thèmes communs.</p>
+    ${[['AN','Communs aux Antilles et à la Guyane'],...TERRS].map(([k,n])=>{const list=activeThemes(null).filter(i=>THEMES[i].terr===k);return list.length?`<h5 class="tgh">${esc(n)} · ${list.length}</h5><div class="themes">${list.map(i=>`<span>${esc(THEMES[i].t)}</span>`).join('')}</div>`:'';}).join('')}</section>
   <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Certaines graphies créoles courantes sont acceptées (par exemple Foyal, zandoli, konpè Lapen).</p></section>
   <section><span class="art">ARTICLE 5</span><h4>Jokers</h4><ul><li>+15 secondes : prolonge une manche de 15 secondes. Un seul par partie.</li><li>Indice : affiche les deux premières lettres et la longueur d'une réponse non trouvée. Deux par partie.</li></ul></section>
   <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, en direct : chaque joueur sur son téléphone. La manche suivante s'ouvre quand l'adversaire a terminé la précédente.</li><li>En ligne, en différé : chaque joueur joue ses ${ROUNDS} manches quand il le souhaite. Le résultat s'affiche quand les deux ont terminé.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
