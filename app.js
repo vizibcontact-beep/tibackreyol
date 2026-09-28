@@ -1,0 +1,1053 @@
+'use strict';
+
+/* ---------- Normalisation & correspondance ---------- */
+const STOP=new Set(['le','la','les','l','de','du','des','d','a','au','aux','en','et','the']);
+function norm(s,extra){
+  s=String(s).toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  return s.split(' ').filter(w=>w&&!STOP.has(w)&&!(extra&&extra.has(w)))
+    .map(w=>w==='st'?'saint':w==='ste'?'sainte':w)
+    .map(w=>w.length>4&&w.endsWith('s')?w.slice(0,-1):w).join('');
+}
+function lev(a,b){
+  if(Math.abs(a.length-b.length)>2)return 9;
+  let p=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){const c=[i];for(let j=1;j<=b.length;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c;}
+  return p[b.length];
+}
+let PREP={},EXTRA={};
+function prep(i){
+  if(PREP[i])return PREP[i];
+  const th=THEMES[i],extra=th.stop?new Set(th.stop):null;
+  const added=(EXTRA[i]||[]).map(x=>'*'.repeat(Math.max(0,Math.min(3,x.pts||1)-1))+x.name+((x.alias||[]).length?'|'+x.alias.join(','):''));
+  return PREP[i]={idx:i,title:th.t,extra,answers:[...th.a,...added].map(s=>{let pts=1;while(s[0]==='*'){pts++;s=s.slice(1);}
+    const [name,al]=s.split('|');const keys=[name,...(al?al.split(','):[])].map(k=>norm(k,extra)).filter(Boolean);
+    return {name,pts,keys:[...new Set(keys)]};})};
+}
+function findAnswer(input,th){
+  const n=norm(input,th.extra);if(!n)return null;
+  for(let i=0;i<th.answers.length;i++)if(th.answers[i].keys.includes(n))return i;
+  const tol=n.length>=10?2:n.length>=5?1:0;if(!tol)return null;
+  let best=null,bd=9;
+  th.answers.forEach((a,i)=>a.keys.forEach(k=>{if(k.length<5)return;const d=lev(n,k);if(d<=tol&&d<bd){bd=d;best=i;}}));
+  return best;
+}
+
+/* ---------- Avatars : personnages des contes et légendes des Antilles ---------- */
+const AVATARS={
+ lapen:{n:'Konpè Lapen',bg:'#3DB57F'},zamba:{n:'Konpè Zamba',bg:'#8FA3AE'},tig:{n:'Konpè Tig',bg:'#C8582B'},
+ manmandlo:{n:'Manman Dlo',bg:'#1B8A8A'},tijan:{n:'Ti-Jean',bg:'#F2B93B'},soukougnan:{n:'Soukougnan',bg:'#3A2466'},
+ djables:{n:'La Diablesse',bg:'#C0283F'},mokozonbi:{n:'Moko Zonbi',bg:'#6D52C0'},chouval:{n:'Chouval twa pat',bg:'#4A2A16'},
+ zonbi:{n:'Zonbi',bg:'#2F5E6A'},manibe:{n:'Bèt a Man Ibé',bg:'#1F3A5E'},lapofig:{n:'Mariann Lapofig',bg:'#E3D29E'},
+ vaval:{n:'Vaval',bg:'#C13FBF'},diabrouj:{n:'Diab Rouj',bg:'#E03A28'},bwabwa:{n:'Bwa Bwa',bg:'#C9D63A'},
+ maskilili:{n:'Maskilili',bg:'#2E8B45'},touloulou:{n:'Touloulou',bg:'#2D55B0'},mounmo:{n:'Moun Mò',bg:'#474A9E'}
+};
+const AVKEYS=Object.keys(AVATARS);
+const avKey=k=>AVATARS[k]?k:'lapen';
+function avatar(k,size){k=avKey(k);const a=AVATARS[k];return `<span class="av" style="background:${a.bg};${size?`width:${size}px;height:${size}px`:''}"><img src="avatars/${k}.jpg" alt="${a.n}" loading="lazy" width="256" height="256"></span>`;}
+
+/* ---------- Niveaux ---------- */
+const LEVELS=[[0,'Ti Kalbas'],[100,'Zandoli'],[300,'Mabouya'],[600,'Manikou'],[1000,'Konpè Lapen'],[1600,'Ti-Jean'],[2500,'Majò'],[4000,'Mèt Kont'],[6000,'Gran Moun'],[9000,'Gran Mèt Kréyol']];
+function levelOf(xp){xp=xp||0;let i=0;while(i<LEVELS.length-1&&xp>=LEVELS[i+1][0])i++;
+  const next=LEVELS[i+1];return {i,name:LEVELS[i][1],min:LEVELS[i][0],next:next?next[0]:null,nextName:next?next[1]:null,pct:next?Math.min(100,Math.round((xp-LEVELS[i][0])/(next[0]-LEVELS[i][0])*100)):100};}
+const XP_WIN=20,XP_TIE=10,XP_PLAY=5;
+
+/* ---------- Utilitaires ---------- */
+const $app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ptsLabel=p=>`<span class="pts p${p}">+${p}</span>`;
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+function activeThemes(terrs){return THEMES.map((t,i)=>i).filter(i=>!THEMES[i].off&&(!terrs||THEMES[i].terr==='AN'||terrs.includes(THEMES[i].terr)));}
+function pickThemes(terrs){
+  terrs=(terrs&&terrs.length)?terrs:(settings.terr||['MQ']);
+  const act=activeThemes(terrs),loc=shuffle(act.filter(i=>THEMES[i].terr!=='AN')),com=shuffle(act.filter(i=>THEMES[i].terr==='AN'));
+  const pick=loc.slice(0,3);
+  for(const i of [...com,...loc.slice(3)]){if(pick.length>=ROUNDS)break;pick.push(i);}
+  return shuffle(pick);
+}
+function terrChips(){return `<div class="terrs" role="group" aria-label="Territoires">${TERRS.map(([k,n])=>`<button type="button" class="terr" data-terr="${k}" aria-pressed="${(settings.terr||[]).includes(k)}">${n}</button>`).join('')}</div>`;}
+function bindTerr(onChange){
+  $app.querySelectorAll('[data-terr]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.terr;let t=(settings.terr||[]).slice();
+    t=t.includes(k)?t.filter(x=>x!==k):[...t,k];if(!t.length){toast('Choisis au moins un territoire.');return;}
+    settings.terr=t;saveSettings();$app.querySelectorAll('[data-terr]').forEach(x=>x.setAttribute('aria-pressed',t.includes(x.dataset.terr)));if(onChange)onChange();
+  });
+}
+const byId=id=>document.getElementById(id);
+let settings={count:2,names:['Joueur 1','Joueur 2'],dur:60,terr:['MQ'],sound:true};
+try{const s=JSON.parse(localStorage.getItem('tibackreyol')||'null');if(s)settings={...settings,...s};}catch(e){}
+function saveSettings(){try{localStorage.setItem('tibackreyol',JSON.stringify(settings));}catch(e){}}
+let tick=null, unsubs=[];
+function cleanup(){clearInterval(tick);tick=null;unsubs.forEach(f=>{try{f()}catch(e){}});unsubs=[];}
+function winnerOf(list){
+  if(list.length<2)return null;
+  const s=list.slice().sort((a,b)=>b.score-a.score||b.count-a.count);
+  if(s[0].score===s[1].score&&s[0].count===s[1].count)return 'tie';
+  return s[0];
+}
+function copyText(txt,btn,label){
+  const done=()=>{if(btn){const o=btn.textContent;btn.textContent=label||'Copié !';setTimeout(()=>btn.textContent=o,1800);}};
+  try{navigator.clipboard.writeText(txt).then(done,()=>fallbackCopy(txt,btn));}catch(e){fallbackCopy(txt,btn);}
+}
+function fallbackCopy(txt,btn){const box=document.createElement('input');box.value=txt;box.type='text';box.style.marginTop='8px';box.readOnly=true;(btn&&btn.parentNode||$app).appendChild(box);box.select();}
+
+/* ---------- Onglets ---------- */
+const TABS=[['jouer','Jouer'],['defi','Défi du jour'],['enligne','En ligne'],['amis','Amis'],['classement','Classement'],['regles','Règlement'],['compte','Connexion'],['legal','Mentions légales']];
+let tab='jouer',IS_OWNER=false;
+function renderTabs(){
+  const tabs=IS_OWNER?[...TABS,['admin','Admin'+(pendingReports().length?` (${pendingReports().length})`:'')]]:TABS;
+  byId('tabs').innerHTML=tabs.map(([k,l])=>`<button type="button" data-tab="${k}" ${k===tab?'aria-current="page"':''}>${l}${k==='amis'&&pendingIn().length?` (${pendingIn().length})`:''}${k==='enligne'&&openInvites().length?` (${openInvites().length})`:''}</button>`).join('');
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>go(b.dataset.tab));
+}
+function go(t){
+  cleanup();tab=t;CURRENT=null;PLAYING=false;SUMMARY=false;renderTabs();window.scrollTo(0,0);
+  ({jouer:showSetup,defi:showDaily,admin:showAdmin,enligne:showOnline,amis:showFriends,classement:showRanking,regles:showRules,compte:showAccount,legal:showLegal})[t]();
+}
+byId('mepill').onclick=()=>go('compte');
+
+/* ---------- Moteur d'une manche ---------- */
+function playRound({who,label,th,dur,jokers,score,onFinish}){
+  cleanup();PLAYING=true;
+  const found=[],rejects=[],rejKeys=new Set();let end=Date.now()+dur*1000,total=dur,hints=[],pts=0,done=false;
+  $app.innerHTML=`
+  <div class="hud">
+    <div class="who">${esc(who)}<small>${esc(label)}</small></div>
+    <div class="timer" id="timer"><svg viewBox="0 0 78 78"><circle cx="39" cy="39" r="33" fill="none" stroke="var(--card)" stroke-width="7"/><circle id="arc" cx="39" cy="39" r="33" fill="none" stroke="var(--gold)" stroke-width="7" stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="0"/></svg><div class="t" id="tt">${dur}</div></div>
+    <div class="score"><span id="sc">${score}</span><small>points</small></div>
+  </div>
+  <div class="theme-card"><h3 style="color:var(--gold)">Thème</h3><h2>${esc(th.title)}</h2><p class="count"><span id="nf">0</span> / ${th.answers.length} trouvées</p></div>
+  <form class="entry" id="f" autocomplete="off"><input type="text" id="in" placeholder="Tape une réponse…" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send"><button class="btn" type="submit">OK</button></form>
+  <div class="feedback" id="fb" aria-live="polite"></div>
+  <div class="jokers">
+    <button class="joker" id="jt" type="button" ${jokers.time?'':'disabled'}>+15 s <small>(${jokers.time})</small></button>
+    <button class="joker" id="jh" type="button" ${jokers.hint?'':'disabled'}>Indice <small>(${jokers.hint})</small></button>
+    <button class="joker" id="jstop" type="button">Terminer la manche</button>
+  </div>
+  <div id="hints" class="hint"></div>
+  <section class="panel"><h3>Tes réponses</h3><div class="found" id="found"></div></section>`;
+  const $in=byId('in'),$fb=byId('fb'),$found=byId('found');
+  $in.focus();
+  const render=()=>{
+    byId('nf').textContent=found.length;byId('sc').textContent=score+pts;
+    $found.innerHTML=found.length?found.slice().reverse().map(i=>{const a=th.answers[i];return `<span class="chip">${esc(a.name)} ${ptsLabel(a.pts)}</span>`;}).join(''):'<span class="empty">Rien pour l\'instant. Lance-toi !</span>';
+    byId('hints').innerHTML=hints.filter(i=>!found.includes(i)).map(i=>esc(mask(th.answers[i].name))).join('<br>');
+  };
+  const say=(msg,cls)=>{$fb.textContent=msg;$fb.className='feedback '+cls;};
+  byId('f').onsubmit=e=>{
+    e.preventDefault();const v=$in.value.trim();if(!v||done)return;
+    const i=findAnswer(v,th);
+    if(i===null){SFX.bad();const rk=norm(v,th.extra);if(rk&&!rejKeys.has(rk)){rejKeys.add(rk);rejects.push(v.slice(0,40));}say(`« ${v} » : pas dans la liste`,'bad');$in.classList.remove('shake');void $in.offsetWidth;$in.classList.add('shake');}
+    else if(found.includes(i)){SFX.dup();say(`${th.answers[i].name} : déjà trouvé`,'dup');}
+    else{found.push(i);const a=th.answers[i];pts+=a.pts;SFX.good(a.pts);
+      say(`${a.name} ! +${a.pts}${a.pts===3?' · très rare':a.pts===2?' · rare':''}`,'ok');render();
+      if(found.length===th.answers.length)finish();}
+    $in.value='';$in.focus();
+  };
+  byId('jt').onclick=function(){if(!jokers.time||done)return;jokers.time--;end+=15000;total+=15;this.disabled=true;this.querySelector('small').textContent='(0)';say('+15 secondes !','ok');$in.focus();};
+  byId('jh').onclick=function(){
+    if(!jokers.hint||done)return;const left=th.answers.map((a,i)=>i).filter(i=>!found.includes(i)&&!hints.includes(i));if(!left.length)return;
+    jokers.hint--;hints.push(left[Math.floor(Math.random()*left.length)]);this.querySelector('small').textContent=`(${jokers.hint})`;if(!jokers.hint)this.disabled=true;render();$in.focus();};
+  byId('jstop').onclick=()=>finish();
+  function finish(){if(done)return;done=true;PLAYING=false;clearInterval(tick);tick=null;SFX.end();onFinish(found.slice(),pts,rejects.slice());}
+  const $tt=byId('tt'),$arc=byId('arc'),$timer=byId('timer');
+  tick=setInterval(()=>{
+    const left=Math.max(0,(end-Date.now())/1000);
+    $tt.textContent=Math.ceil(left);$arc.setAttribute('stroke-dashoffset',207.3*(1-left/total));
+    $timer.classList.toggle('low',left<=10);$arc.setAttribute('stroke',left<=10?'var(--red)':'var(--gold)');
+    if(left<=0)finish();
+  },200);
+  render();
+}
+function mask(name){return [...name].map((c,i)=>i<2||/[\s'\-]/.test(c)?c:'_').join('');}
+function answersTable(th,cols){
+  const order=th.answers.map((a,i)=>i).sort((x,y)=>{const fx=cols.some(c=>c.found&&c.found.includes(x)),fy=cols.some(c=>c.found&&c.found.includes(y));return (fy-fx)||(th.answers[y].pts-th.answers[x].pts);});
+  return `<div class="scroll"><table class="tbl"><thead><tr><th>Réponse</th><th>Pts</th>${cols.map(c=>`<th class="c">${esc(c.name.slice(0,9))}</th>`).join('')}</tr></thead>
+  <tbody>${order.map(i=>{const a=th.answers[i],any=cols.some(c=>c.found&&c.found.includes(i));return `<tr class="${any?'':'miss'}"><td>${esc(a.name)}</td><td>${ptsLabel(a.pts)}</td>${cols.map(c=>`<td class="c">${c.found&&c.found.includes(i)?'<span class="tick">✓</span>':'<span class="dash">·</span>'}</td>`).join('')}</tr>`;}).join('')}</tbody></table></div>`;
+}
+
+/* =================== JOUER (même téléphone) =================== */
+let G=null,PLAYING=false,SUMMARY=false;
+function showSetup(){
+  $app.innerHTML=`
+  <section class="panel">
+    <h2>Le petit bac 100 % Matinik</h2>
+    <p class="muted">5 manches, un thème par manche. Tape un maximum de réponses avant la fin du chrono. Les réponses rares rapportent plus.</p>
+    <div class="rules">
+      <div class="rule"><b>${ptsLabel(1)} Classique</b><span>Fort-de-France, mangue, colombo…</span></div>
+      <div class="rule"><b>${ptsLabel(2)} Rare</b><span>Case-Pilote, quénette, souskaï…</span></div>
+      <div class="rule"><b>${ptsLabel(3)} Très rare</b><span>Macouba, icaque, Kolo Barst…</span></div>
+    </div>
+  </section>
+  <section class="panel">
+    <h3>Partie sur ce téléphone</h3>
+    <div class="row"><div class="seg" role="group" aria-label="Nombre de joueurs">
+      <button type="button" id="c1" aria-pressed="${settings.count===1}">Solo</button>
+      <button type="button" id="c2" aria-pressed="${settings.count===2}">2 joueurs</button></div>
+      <span class="muted" style="font-size:13px">${settings.count===2?'Chacun son tour sur le même téléphone':'Bats ton propre record'}</span></div>
+    <div class="row">
+      <label class="fld grow">Joueur 1<input type="text" id="n0" maxlength="16" value="${esc(settings.names[0])}"></label>
+      ${settings.count===2?`<label class="fld grow">Joueur 2<input type="text" id="n1" maxlength="16" value="${esc(settings.names[1])}"></label>`:''}
+    </div>
+    <h3>Territoires</h3>
+    ${terrChips()}
+    <p class="muted" style="font-size:13px" id="tcount"></p>
+    <h3>Durée d'une manche</h3>
+    <div class="seg" role="group" aria-label="Durée">${[45,60,90].map(d=>`<button type="button" data-d="${d}" aria-pressed="${settings.dur===d}">${d} s</button>`).join('')}</div>
+    <div class="row"><button class="btn ghost sm" id="snd" type="button">${settings.sound?'Sons : activés':'Sons : coupés'}</button></div>
+    <button class="btn wide" id="go" type="button">Lancer la partie</button>
+    <p class="foot">Les parties sur un même téléphone ne comptent pas pour le classement.</p>
+  </section>
+  <section class="panel">
+    <h3>Défi du jour</h3>
+    <p class="muted">Un nouveau thème chaque jour, le même pour tout le monde, avec son classement et son proverbe créole.</p>
+    <button class="btn ghost" id="toDaily" type="button">Relever le défi du jour</button>
+  </section>
+  <section class="panel">
+    <h3>Jouer à distance</h3>
+    <p class="muted">Défie un ami sur son propre téléphone, en direct ou chacun à son rythme, et grimpe au classement.</p>
+    <div class="row"><button class="btn ghost grow" id="toOnline" type="button">En ligne</button><button class="btn ghost grow" id="toFriends" type="button">Mes amis</button></div>
+  </section>
+  ${installPanel()}
+  <section class="panel">
+    <h3>Les thèmes de ta sélection</h3>
+    <div class="themes" id="tlist"></div>
+  </section>`;
+  const paintThemes=()=>{const act=activeThemes(settings.terr);byId('tcount').textContent=`${act.length} thèmes : ceux des territoires choisis, plus les thèmes communs aux Antilles et à la Guyane.`;
+    byId('tlist').innerHTML=act.map(i=>`<span>${esc(THEMES[i].t)}${THEMES[i].terr!=='AN'?` <b class="tg">${esc(TERR_NAME[THEMES[i].terr])}</b>`:''}</span>`).join('');};
+  paintThemes();bindTerr(paintThemes);
+  byId('snd').onclick=function(){settings.sound=!settings.sound;saveSettings();this.textContent=settings.sound?'Sons : activés':'Sons : coupés';if(settings.sound)SFX.good(1);};
+  const readNames=()=>{settings.names[0]=(byId('n0').value.trim()||'Joueur 1');const n1=byId('n1');if(n1)settings.names[1]=n1.value.trim()||'Joueur 2';};
+  byId('c1').onclick=()=>{readNames();settings.count=1;saveSettings();showSetup();};
+  byId('c2').onclick=()=>{readNames();settings.count=2;saveSettings();showSetup();};
+  $app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{readNames();settings.dur=+b.dataset.d;saveSettings();showSetup();});
+  byId('go').onclick=()=>{readNames();saveSettings();newLocalGame();};
+  byId('toOnline').onclick=()=>go('enligne');byId('toDaily').onclick=()=>go('defi');bindInstall();
+  byId('toFriends').onclick=()=>go('amis');
+}
+function newLocalGame(){
+  G={players:settings.names.slice(0,settings.count).map(name=>({name,score:0,count:0,jokers:{time:1,hint:2}})),themes:pickThemes(settings.terr),round:0,turn:0,dur:settings.dur};
+  G.found=G.themes.map(()=>G.players.map(()=>[]));G.rej=G.themes.map(()=>G.players.map(()=>[]));G.roundPts=G.themes.map(()=>G.players.map(()=>0));
+  localIntro();
+}
+function localIntro(){
+  cleanup();
+  const p=G.players[G.turn],th=prep(G.themes[G.round]),multi=G.players.length>1;
+  $app.innerHTML=`
+  <section class="panel center pass">
+    ${multi?`<h3>Passe le téléphone à</h3><p class="big">${esc(p.name)}</p>`:`<h3>Manche ${G.round+1} sur ${ROUNDS}</h3>`}
+    <div class="theme-card" style="width:100%"><h3 style="color:var(--gold)">Manche ${G.round+1} · Thème</h3><h2>${esc(th.title)}</h2><p class="count">${th.answers.length} réponses à trouver · ${G.dur} secondes</p></div>
+    <button class="btn wide" id="ready" type="button">Je suis prêt·e, go !</button>
+  </section>
+  <div class="scoreline">${G.players.map(q=>`<div class="sc"><span class="n">${esc(q.name)}</span><span class="v">${q.score}</span><span class="d">points</span></div>`).join('')}</div>`;
+  byId('ready').onclick=()=>playRound({who:p.name,label:`Manche ${G.round+1}/${ROUNDS}`,th,dur:G.dur,jokers:p.jokers,score:p.score,
+    onFinish:(found,pts,rej)=>{G.found[G.round][G.turn]=found;G.rej[G.round][G.turn]=rej;G.roundPts[G.round][G.turn]=pts;p.score+=pts;p.count+=found.length;
+      if(G.turn<G.players.length-1){G.turn++;localIntro();}else localRoundResult();}});
+}
+function localRoundResult(){
+  const th=prep(G.themes[G.round]),F=G.found[G.round],last=G.round===ROUNDS-1;
+  $app.innerHTML=`
+  <section class="panel"><h3>Fin de la manche ${G.round+1}</h3><h2>${esc(th.title)}</h2>
+    <div class="scoreline">${G.players.map((p,k)=>`<div class="sc"><span class="n">${esc(p.name)}</span><span class="v">+${G.roundPts[G.round][k]}</span><span class="d">${F[k].length} réponse${F[k].length>1?'s':''} · total ${p.score}</span></div>`).join('')}</div>
+  </section>
+  ${anecBlock(G.themes[G.round])}
+  ${reportBlock(G.themes[G.round],[].concat(...G.rej[G.round]))}
+  <section class="panel"><h3>Toutes les réponses</h3>${answersTable(th,G.players.map((p,k)=>({name:p.name,found:F[k]})))}</section>
+  <button class="btn wide" id="nx" type="button">${last?'Voir le classement final':'Manche suivante'}</button>`;
+  bindReports();
+  byId('nx').onclick=()=>{if(last)localFinal();else{G.round++;G.turn=0;localIntro();}};
+  window.scrollTo(0,0);
+}
+function localFinal(){
+  const multi=G.players.length>1,w=winnerOf(G.players);
+  const headline=!multi?`${G.players[0].score} points`:w==='tie'?'Match nul !':`${esc(w.name)} gagne !`;
+  $app.innerHTML=`
+  <section class="panel center pass"><h3>${multi?'Résultat':'Ton score'}</h3><p class="big">${headline}</p>
+    <p class="muted">${multi?G.players.map(p=>`${esc(p.name)} : ${p.score} pts`).join(' · '):`${G.players[0].count} bonnes réponses sur ${ROUNDS} thèmes`}</p></section>
+  <section class="panel"><h3>Détail par manche</h3>
+  <div class="scroll"><table class="tbl"><thead><tr><th>Thème</th>${G.players.map(p=>`<th class="num">${esc(p.name.slice(0,9))}</th>`).join('')}</tr></thead>
+  <tbody>${G.themes.map((t,r)=>`<tr><td>${esc(THEMES[t].t)}</td>${G.players.map((p,k)=>`<td class="num">${G.roundPts[r][k]}</td>`).join('')}</tr>`).join('')}
+  <tr><td><b>Total</b></td>${G.players.map(p=>`<td class="num"><b>${p.score}</b></td>`).join('')}</tr></tbody></table></div></section>
+  <div class="row"><button class="btn grow" id="again" type="button">Revanche (nouveaux thèmes)</button><button class="btn ghost grow" id="home" type="button">Changer les joueurs</button></div>`;
+  byId('again').onclick=newLocalGame;byId('home').onclick=showSetup;
+  window.scrollTo(0,0);
+  if(!multi||w!=='tie'){SFX.win();confetti();}
+}
+
+
+/* =================== « OU TÉ SAV SA ? » =================== */
+function anecBlock(t){
+  const list=ANEC[t];if(!list||!list.length)return '';
+  const a=list[Math.floor(Math.random()*list.length)];
+  return `<section class="panel anec"><h3>Ou té sav sa ?</h3><p>${esc(a)}</p></section>`;
+}
+
+/* =================== DÉFI : outils =================== */
+function todayKey(){return new Date(Date.now()-4*3600e3).toISOString().slice(0,10);} // heure des Antilles (UTC-4)
+function hashStr(str){let h=2166136261;for(const c of str){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function dailyTheme(d){const act=activeThemes(null);return act[hashStr('tibac'+d)%act.length];}
+function dailyProverb(d){return PROVERBS[hashStr('pwovèb'+d)%PROVERBS.length];}
+
+
+/* =================== CONNEXION AU SERVEUR (Supabase) =================== */
+const CFG=window.TIBAC_CONFIG||{};
+const CONFIGURED=!!(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY&&!/VOTRE|XXXX/.test(CFG.SUPABASE_URL+CFG.SUPABASE_ANON_KEY));
+const SB=(CONFIGURED&&window.supabase)?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
+let SESSION=null,UID=null,READY=false,RECOVERY=false;
+let MEP=null,MEPLOADED=false,FRIENDSHIPS=[],MYMATCHES=[],INVITES=[],TOP=[],PCACHE={},PFETCH={};
+let MYREPORTS=[],ALLREPORTS=[],MYDAILY=null,MYDAILY_LOADED=false,EARNED=null;
+let CURRENT=null,PENDING_CODE=null,AWARDING={},CELEBRATED={};
+{const h=(location.hash||'').replace('#','').toUpperCase();if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;}
+
+const hasProfile=()=>!!(MEP&&MEP.pseudo);
+const myPseudo=()=>(MEP&&MEP.pseudo)||'Joueur';
+const myAvatar=()=>(MEP&&MEP.avatar)||'lapen';
+function pairId(a,b){return [a,b].sort().join('__');}
+function likeEsc(s){return String(s).replace(/[\\%_]/g,m=>'\\'+m);}
+function withUid(p){return p?{...p,uid:p.id}:p;}
+function player(uid){
+  if(uid===UID&&MEP)return MEP;
+  if(PCACHE[uid])return PCACHE[uid];
+  if(SB&&uid&&!PFETCH[uid]){PFETCH[uid]=1;SB.from('profiles').select('id,pseudo,avatar,xp').eq('id',uid).maybeSingle().then(({data})=>{PCACHE[uid]=withUid(data)||{uid,pseudo:'Joueur supprimé',avatar:'zonbi',xp:0};refreshAll();});}
+  return null;
+}
+function friendOf(f){return f.user_a===UID?f.user_b:f.user_a;}
+function friendsList(){return FRIENDSHIPS.filter(f=>f.status==='accepted').map(friendOf);}
+function pendingIn(){return FRIENDSHIPS.filter(f=>f.status==='pending'&&f.to_id===UID);}
+function pendingOut(){return FRIENDSHIPS.filter(f=>f.status==='pending'&&f.from_id===UID);}
+function openInvites(){return INVITES.filter(m=>(m.players||[]).length<2&&!(m.players||[]).includes(UID)&&!m.invite_status);}
+function paintPill(){
+  byId('mename').textContent=hasProfile()?myPseudo():(SESSION?'Mon profil':'Connexion');
+  const k=avKey(myAvatar());byId('meav').style.background=AVATARS[k].bg;byId('meav').innerHTML=hasProfile()?`<img src="avatars/${k}.jpg" alt="">`:'';
+}
+function dbMsg(e){
+  const c=e&&(e.code||e.status);
+  if(c==='23505')return 'Cet élément existe déjà.';
+  if(c==='42501'||c===401||c===403)return "Action refusée : vérifie que tu es bien connecté·e.";
+  if(!navigator.onLine)return 'Pas de connexion internet. Réessaie quand tu seras connecté·e.';
+  return 'La connexion au serveur a échoué. Réessaie dans un instant.';
+}
+async function q(p){const {data,error}=await p;if(error)throw error;return data;}
+
+/* ---------- Chargements ---------- */
+async function loadProfile(){if(!UID){MEP=null;MEPLOADED=true;return;}
+  try{MEP=withUid(await q(SB.from('profiles').select('*').eq('id',UID).maybeSingle()));}catch(e){}
+  MEPLOADED=true;paintPill();checkBadges();}
+async function loadFriends(){if(!UID){FRIENDSHIPS=[];return;}try{FRIENDSHIPS=await q(SB.from('friendships').select('*'));}catch(e){}}
+async function loadMatches(){
+  if(!UID){MYMATCHES=[];return;}
+  try{
+    const ms=await q(SB.from('matches').select('*').contains('players',[UID]).order('created_at',{ascending:false}).limit(40));
+    const codes=ms.map(m=>m.code);let plays=[];
+    if(codes.length)plays=await q(SB.from('plays').select('code,user_id,r,score,found_count').in('code',codes));
+    ms.forEach(m=>{m.progress={};plays.filter(p=>p.code===m.code).forEach(p=>{m.progress[p.user_id]={r:p.r,score:p.score,count:p.found_count};});});
+    MYMATCHES=ms;
+  }catch(e){}
+}
+async function loadInvites(){if(!UID){INVITES=[];return;}try{INVITES=await q(SB.from('matches').select('*').eq('invite',UID).is('invite_status',null).limit(20));}catch(e){}}
+async function loadTop(){try{TOP=(await q(SB.from('profiles').select('id,pseudo,avatar,xp').order('xp',{ascending:false}).limit(200))).map(withUid);TOP.forEach(p=>PCACHE[p.uid]=p);}catch(e){}}
+async function loadExtras(){try{const rows=await q(SB.from('extras').select('*').order('id'));EXTRA={};rows.forEach(r=>{(EXTRA[r.theme]=EXTRA[r.theme]||[]).push(r);});PREP={};}catch(e){}}
+async function loadMyReports(){if(!UID){MYREPORTS=[];return;}try{MYREPORTS=await q(SB.from('reports').select('theme,answer,status').eq('user_id',UID));}catch(e){}}
+async function loadAllReports(){if(!IS_OWNER)return;try{ALLREPORTS=await q(SB.from('reports').select('id,user_id,theme,answer,status').eq('status','new').limit(1000));}catch(e){}}
+async function loadMyDaily(){if(!UID){MYDAILY=null;MYDAILY_LOADED=true;return;}try{MYDAILY=await q(SB.from('dailyscores').select('*').eq('user_id',UID).maybeSingle());}catch(e){}MYDAILY_LOADED=true;}
+
+const DEB={};
+function later(key,fn){clearTimeout(DEB[key]);DEB[key]=setTimeout(async()=>{await fn();renderTabs();refreshAll();},350);}
+let CHANNEL=null;
+function subscribeRealtime(){
+  if(!SB||CHANNEL)return;
+  CHANNEL=SB.channel('tibac-live')
+   .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},p=>{const id=(p.new&&p.new.id)||(p.old&&p.old.id);if(id===UID)later('me',loadProfile);if(p.new&&p.new.id)PCACHE[p.new.id]=withUid(p.new);later('top',loadTop);})
+   .on('postgres_changes',{event:'*',schema:'public',table:'friendships'},()=>later('fr',loadFriends))
+   .on('postgres_changes',{event:'*',schema:'public',table:'matches'},p=>{later('ma',async()=>{await loadMatches();await loadInvites();});const c=(p.new&&p.new.code)||(p.old&&p.old.code);if(CURRENT&&c===CURRENT)reloadCurrent();})
+   .on('postgres_changes',{event:'*',schema:'public',table:'plays'},p=>{later('ma',loadMatches);const c=(p.new&&p.new.code)||(p.old&&p.old.code);if(CURRENT&&c===CURRENT)reloadCurrent();})
+   .on('postgres_changes',{event:'*',schema:'public',table:'dailyscores'},()=>{later('da',async()=>{await loadMyDaily();await loadDailyList();});})
+   .on('postgres_changes',{event:'*',schema:'public',table:'extras'},()=>later('ex',loadExtras))
+   .on('postgres_changes',{event:'*',schema:'public',table:'reports'},()=>later('rp',async()=>{await loadMyReports();await loadAllReports();}))
+   .subscribe();
+}
+async function loadAll(){
+  await Promise.all([loadProfile(),loadFriends(),loadMatches(),loadInvites(),loadTop(),loadExtras(),loadMyReports(),loadMyDaily()]);
+  IS_OWNER=false;if(UID){try{IS_OWNER=!!(await q(SB.rpc('is_admin')));}catch(e){}}
+  await loadAllReports();
+}
+async function onSession(session){
+  SESSION=session;const newUid=session?session.user.id:null;
+  if(newUid!==UID){UID=newUid;MEP=null;MEPLOADED=false;MYDAILY_LOADED=false;EARNED=null;await loadAll();}
+  READY=true;paintPill();renderTabs();
+  if(!PLAYING&&!CURRENT&&!SUMMARY)go(tab);
+  handlePending();
+}
+(async()=>{
+  if(!SB){READY=true;MEPLOADED=true;MYDAILY_LOADED=true;renderTabs();if(tab!=='jouer')go(tab);return;}
+  SB.auth.onAuthStateChange((event,session)=>{
+    if(event==='PASSWORD_RECOVERY'){RECOVERY=true;SESSION=session;go('compte');return;}
+    if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='USER_UPDATED')onSession(session);
+  });
+  const {data}=await SB.auth.getSession();
+  await onSession(data.session);
+  subscribeRealtime();
+})();
+
+function refreshAll(){
+  if(PLAYING||CURRENT||SUMMARY)return;
+  if(tab==='enligne'){if(byId('mlist'))renderMatchList();else showOnline();}
+  if(tab==='amis'){if(byId('flist'))renderFriendLists();else showFriends();}
+  if(tab==='classement'){if(byId('rank'))renderRank();else showRanking();}
+  if(tab==='compte'){if(byId('stats'))renderStats();else if(!byId('ps')&&!byId('em'))showAccount();}
+  if(tab==='defi'){if(byId('dstate'))renderDaily();else showDaily();}
+  if(tab==='admin'){if(byId('adm'))renderAdmin();else showAdmin();}
+}
+async function handlePending(){
+  if(!PENDING_CODE||!READY||!SB)return;
+  if(!SESSION||!hasProfile()){if(tab!=='compte')go('compte');return;}
+  const code=PENDING_CODE;PENDING_CODE=null;history.replaceState(null,'',location.pathname);
+  try{const r=await joinMatch(code);if(r){go('enligne');const e=byId('jerr');if(e)e.textContent=r;}else openMatch(code);}catch(e){go('enligne');}
+}
+function needAuth(){
+  if(!SB){$app.innerHTML=`<section class="panel"><h2>Mode en ligne pas encore configuré</h2><p class="muted">Le jeu en ligne a besoin d'être relié à sa base de données (fichier config.js). En attendant, le mode « Jouer » fonctionne sur ce téléphone.</p></section>`;return true;}
+  if(!READY||(SESSION&&!MEPLOADED)){$app.innerHTML=`<section class="panel center pass"><p class="muted">Connexion…</p></section>`;return true;}
+  if(!SESSION){$app.innerHTML=`<section class="panel"><h2>Connecte-toi pour jouer en ligne</h2><p class="muted">Un compte gratuit te permet d'affronter tes amis, de relever le défi du jour et d'apparaître au classement.</p><button class="btn" id="toAcc" type="button">Se connecter ou créer un compte</button></section>`;byId('toAcc').onclick=()=>go('compte');return true;}
+  if(!hasProfile()){$app.innerHTML=`<section class="panel"><h2>Crée ton profil de joueur</h2><p class="muted">Choisis un pseudo et un personnage pour jouer en ligne, ajouter des amis et apparaître au classement.</p><button class="btn" id="toAcc" type="button">Créer mon profil</button></section>`;byId('toAcc').onclick=()=>go('compte');return true;}
+  return false;
+}
+
+/* =================== CONNEXION / PROFIL =================== */
+let PICK=null,AUTHMODE='login';
+function showAccount(){
+  if(!SB){needAuth();return;}
+  if(!READY){$app.innerHTML=`<section class="panel center pass"><p class="muted">Connexion…</p></section>`;return;}
+  if(RECOVERY){return showNewPassword();}
+  if(!SESSION){return showLogin();}
+  if(!MEPLOADED){$app.innerHTML=`<section class="panel center pass"><p class="muted">Chargement de ton profil…</p></section>`;return;}
+  PICK=avKey(PICK||myAvatar());
+  const lv=levelOf(MEP&&MEP.xp);
+  $app.innerHTML=`
+  ${PENDING_CODE?`<p class="notice">Crée ton profil pour rejoindre la partie <b>${esc(PENDING_CODE)}</b>.</p>`:''}
+  <section class="panel">
+    <h3>${hasProfile()?'Mon profil':'Créer mon profil'}</h3>
+    ${hasProfile()?`<div class="hero-me">${avatar(myAvatar(),64)}<div><h2 style="font-size:24px">${esc(myPseudo())}</h2><p class="muted" style="font-size:14px">Niveau ${lv.i+1} · ${esc(lv.name)} · ${MEP.xp||0} pts</p></div></div>
+      <div class="bar" aria-hidden="true"><i style="width:${lv.pct}%"></i></div><p class="muted" style="font-size:13px">${lv.next!==null?`Encore ${lv.next-(MEP.xp||0)} pts pour devenir ${esc(lv.nextName)}`:'Niveau maximum atteint'}</p>`:''}
+    <label class="fld">Pseudo (unique, 3 à 16 caractères). C'est avec lui que tes amis te trouvent.<input type="text" id="ps" maxlength="16" autocomplete="nickname" placeholder="Ex. : TiLapen972" value="${esc(hasProfile()?myPseudo():'')}"></label>
+    <h3>Ton personnage</h3>
+    <div class="avgrid">${AVKEYS.map(k=>`<button type="button" class="avopt" data-av="${k}" aria-pressed="${k===PICK}">${avatar(k)}<span>${AVATARS[k].n}</span></button>`).join('')}</div>
+    <div class="row"><button class="btn" id="save" type="button">${hasProfile()?'Enregistrer':'Créer mon profil'}</button><span id="saved" aria-live="polite"></span></div>
+  </section>
+  ${hasProfile()?`<section class="panel"><h3>Mes statistiques en ligne</h3><div class="stats" id="stats"></div></section>
+  <section class="panel"><h3>Mes badges · ${earnedBadges().length} / ${BADGES.length}</h3>${badgeGrid()}</section>`:''}
+  <section class="panel"><h3>Mon compte</h3>
+    <p class="muted" style="font-size:14px">Connecté·e avec <b id="myemail"></b></p>
+    <div class="row"><button class="btn ghost" id="logout" type="button">Se déconnecter</button><button class="btn ghost" id="delacc" type="button">Supprimer mon compte</button></div>
+    <div id="delbox"></div>
+  </section>`;
+  byId('myemail').textContent=SESSION.user.email||'';
+  $app.querySelectorAll('[data-av]').forEach(b=>b.onclick=()=>{PICK=b.dataset.av;$app.querySelectorAll('[data-av]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+  byId('save').onclick=async function(){
+    const msg=byId('saved');const p=byId('ps').value.trim();
+    if(!/^[A-Za-zÀ-ÿ0-9 _\-]{3,16}$/.test(p)){msg.className='bad';msg.textContent='3 à 16 caractères : lettres, chiffres, espace, - ou _.';return;}
+    this.disabled=true;msg.className='muted';msg.textContent='Enregistrement…';
+    const r=await saveProfile(p,PICK);
+    if(r){msg.className='bad';msg.textContent=r;this.disabled=false;return;}
+    if(PENDING_CODE)handlePending();else{showAccount();const m2=byId('saved');if(m2){m2.className='ok';m2.textContent='Profil enregistré';}}
+  };
+  byId('logout').onclick=async()=>{await SB.auth.signOut();go('jouer');};
+  byId('delacc').onclick=()=>{byId('delbox').innerHTML=`<p class="notice">Ton profil, tes amis, tes parties et tes scores seront définitivement supprimés.</p><div class="row"><button class="btn red" id="delyes" type="button">Oui, supprimer définitivement</button><button class="btn ghost" id="delno" type="button">Annuler</button></div>`;
+    byId('delno').onclick=()=>{byId('delbox').innerHTML='';};
+    byId('delyes').onclick=async function(){this.disabled=true;try{await q(SB.rpc('delete_my_account'));await SB.auth.signOut();toast('Ton compte a été supprimé.');go('jouer');}catch(e){this.disabled=false;byId('delbox').insertAdjacentHTML('beforeend',`<p class="bad">${esc(dbMsg(e))}</p>`);}};};
+  renderStats();
+}
+function showLogin(){
+  const signup=AUTHMODE==='signup';
+  $app.innerHTML=`
+  ${PENDING_CODE?`<p class="notice">Connecte-toi pour rejoindre la partie <b>${esc(PENDING_CODE)}</b>.</p>`:''}
+  <section class="panel">
+    <div class="seg" role="group" aria-label="Connexion"><button type="button" data-am="login" aria-pressed="${!signup}">Se connecter</button><button type="button" data-am="signup" aria-pressed="${signup}">Créer un compte</button></div>
+    <form id="authf" class="panel" style="padding:0;border:0;background:none" autocomplete="on">
+      <label class="fld">Adresse e-mail<input type="text" id="em" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="toi@exemple.com"></label>
+      <label class="fld">Mot de passe${signup?' (8 caractères minimum)':''}<input type="password" id="pw" autocomplete="${signup?'new-password':'current-password'}" class="pw"></label>
+      <button class="btn wide" type="submit" id="authgo">${signup?'Créer mon compte':'Se connecter'}</button>
+      <p id="amsg" aria-live="polite"></p>
+    </form>
+    ${signup?'':'<button class="btn ghost sm" id="forgot" type="button">Mot de passe oublié ?</button>'}
+  </section>
+  <section class="panel"><h3>Pourquoi un compte ?</h3><p class="muted" style="font-size:14px">Il sert à jouer en ligne avec tes amis, à garder tes points, tes badges et ton niveau d'un téléphone à l'autre, et à apparaître au classement. Les parties sur un seul téléphone restent possibles sans compte.</p></section>`;
+  $app.querySelectorAll('[data-am]').forEach(b=>b.onclick=()=>{AUTHMODE=b.dataset.am;showLogin();});
+  const msg=byId('amsg');
+  byId('authf').onsubmit=async e=>{
+    e.preventDefault();const em=byId('em').value.trim(),pw=byId('pw').value;
+    if(!/^\S+@\S+\.\S+$/.test(em)){msg.className='bad';msg.textContent='Adresse e-mail invalide.';return;}
+    if(pw.length<(signup?8:1)){msg.className='bad';msg.textContent=signup?'Le mot de passe doit faire au moins 8 caractères.':'Saisis ton mot de passe.';return;}
+    byId('authgo').disabled=true;msg.className='muted';msg.textContent='Un instant…';
+    if(signup){
+      const {data,error}=await SB.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname+(PENDING_CODE?'#'+PENDING_CODE:'')}});
+      if(error){msg.className='bad';msg.textContent=authMsg(error);byId('authgo').disabled=false;return;}
+      if(!data.session){msg.className='ok';msg.textContent='Compte créé ! Ouvre l\'e-mail de confirmation que tu viens de recevoir, puis reviens te connecter.';}
+    }else{
+      const {error}=await SB.auth.signInWithPassword({email:em,password:pw});
+      if(error){msg.className='bad';msg.textContent=authMsg(error);byId('authgo').disabled=false;}
+    }
+  };
+  const fg=byId('forgot');if(fg)fg.onclick=async()=>{
+    const em=byId('em').value.trim();if(!/^\S+@\S+\.\S+$/.test(em)){msg.className='bad';msg.textContent='Saisis d\'abord ton adresse e-mail ci-dessus.';return;}
+    const {error}=await SB.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+    msg.className=error?'bad':'ok';msg.textContent=error?authMsg(error):'Si un compte existe avec cette adresse, un e-mail pour choisir un nouveau mot de passe vient d\'être envoyé.';
+  };
+}
+function authMsg(e){
+  const m=String(e&&e.message||'').toLowerCase();
+  if(m.includes('invalid login'))return 'E-mail ou mot de passe incorrect.';
+  if(m.includes('not confirmed'))return 'Confirme d\'abord ton adresse avec l\'e-mail reçu à l\'inscription.';
+  if(m.includes('already registered'))return 'Un compte existe déjà avec cette adresse. Connecte-toi.';
+  if(m.includes('rate limit')||m.includes('security purposes'))return 'Trop de tentatives. Patiente une minute avant de réessayer.';
+  if(m.includes('password'))return 'Mot de passe refusé : choisis-en un plus long ou plus varié.';
+  return 'Une erreur est survenue. Vérifie ta connexion et réessaie.';
+}
+function showNewPassword(){
+  $app.innerHTML=`<section class="panel"><h2>Choisis un nouveau mot de passe</h2>
+  <form id="npf" class="panel" style="padding:0;border:0;background:none"><label class="fld">Nouveau mot de passe (8 caractères minimum)<input type="password" id="npw" autocomplete="new-password" class="pw"></label>
+  <button class="btn" type="submit">Enregistrer</button><p id="nmsg" aria-live="polite"></p></form></section>`;
+  byId('npf').onsubmit=async e=>{e.preventDefault();const pw=byId('npw').value,m=byId('nmsg');
+    if(pw.length<8){m.className='bad';m.textContent='8 caractères minimum.';return;}
+    const {error}=await SB.auth.updateUser({password:pw});
+    if(error){m.className='bad';m.textContent=authMsg(error);return;}
+    RECOVERY=false;toast('Mot de passe modifié.');go('compte');};
+}
+async function saveProfile(p,av){
+  const row={pseudo:p,avatar:av,updated_at:new Date().toISOString()};
+  const {error}=MEP?await SB.from('profiles').update(row).eq('id',UID):await SB.from('profiles').insert({id:UID,...row});
+  if(error)return error.code==='23505'?'Ce pseudo est déjà pris. Essaie une variante.':dbMsg(error);
+  await loadProfile();paintPill();return null;
+}
+function progOf(m,id){return (m.progress&&m.progress[id])||{r:0,score:0,count:0};}
+function renderStats(){
+  const el=byId('stats');if(!el||!MEP)return;
+  el.innerHTML=`<div class="stat"><b>${MEP.games||0}</b><span>parties terminées</span></div><div class="stat"><b>${MEP.wins||0}</b><span>victoires</span></div><div class="stat"><b>${friendsList().length}</b><span>amis</span></div>`;
+}
+async function recordRound(t,found,pts,more){
+  if(!MEP||!SB)return;
+  const th=prep(t),perfect=found.length===th.answers.length?1:0,r3=found.filter(i=>th.answers[i]&&th.answers[i].pts===3).length;
+  const best={...(MEP.best||{})};best[t]=Math.max(best[t]||0,found.length);
+  const upd={xp:(MEP.xp||0)+pts,perfect:(MEP.perfect||0)+perfect,rare3:(MEP.rare3||0)+r3,best,updated_at:new Date().toISOString(),...(more||{})};
+  await q(SB.from('profiles').update(upd).eq('id',UID));
+  MEP={...MEP,...upd};checkBadges();
+}
+function afterRound({title,t,found,pts,rej,btn,next}){
+  cleanup();SUMMARY=true;window.scrollTo(0,0);
+  const th=prep(t);
+  $app.innerHTML=`
+  <section class="panel center pass"><h3>${esc(title)}</h3><p class="big">+${pts}</p><p class="muted">${esc(th.title)} · ${found.length} / ${th.answers.length} réponses</p></section>
+  ${anecBlock(t)}
+  ${reportBlock(t,rej)}
+  <section class="panel"><h3>Toutes les réponses</h3>${answersTable(th,[{name:'Toi',found}])}</section>
+  <button class="btn wide" id="nx" type="button">${esc(btn)}</button>`;
+  bindReports();byId('nx').onclick=next;
+}
+
+/* =================== AMIS =================== */
+function showFriends(){
+  if(needAuth())return;
+  $app.innerHTML=`
+  <section class="panel">
+    <h3>Ajouter un ami</h3>
+    <p class="muted" style="font-size:14px">Ton pseudo : <b style="color:var(--gold)">${esc(myPseudo())}</b>. Donne-le à tes amis pour qu'ils t'ajoutent.</p>
+    <div class="entry"><input type="text" id="fp" maxlength="16" placeholder="Pseudo de ton ami"><button class="btn" id="fadd" type="button">Ajouter</button></div>
+    <p id="fmsg" aria-live="polite"></p>
+  </section>
+  <section class="panel" id="reqbox"><h3>Demandes reçues</h3><div class="plist" id="reqin"></div></section>
+  <section class="panel"><h3>Mes amis</h3><div class="plist" id="flist"></div><div id="sentbox"></div></section>`;
+  byId('fadd').onclick=async function(){
+    const msg=byId('fmsg'),p=byId('fp').value.trim();if(!p)return;
+    this.disabled=true;msg.className='muted';msg.textContent='Recherche…';
+    try{const r=await addFriend(p);msg.className=r.ok?'ok':'bad';msg.textContent=r.msg;if(r.ok)byId('fp').value='';}catch(e){msg.className='bad';msg.textContent=dbMsg(e);}
+    this.disabled=false;
+  };
+  renderFriendLists();
+}
+async function addFriend(p){
+  if(p.length<3)return {msg:'Pseudo trop court.'};
+  if(p.toLowerCase()===myPseudo().toLowerCase())return {msg:'C\'est ton propre pseudo !'};
+  const other=await q(SB.from('profiles').select('id,pseudo,avatar,xp').ilike('pseudo',likeEsc(p)).maybeSingle());
+  if(!other)return {msg:`Aucun joueur ne s'appelle « ${p} ».`};
+  PCACHE[other.id]=withUid(other);
+  const id=pairId(UID,other.id),f=FRIENDSHIPS.find(x=>x.id===id)||await q(SB.from('friendships').select('*').eq('id',id).maybeSingle());
+  if(f){
+    if(f.status==='accepted')return {msg:'Vous êtes déjà amis.'};
+    if(f.to_id===UID){await q(SB.from('friendships').update({status:'accepted'}).eq('id',id));await loadFriends();renderFriendLists();return {ok:1,msg:'Demande acceptée : vous êtes amis !'};}
+    return {msg:'Demande déjà envoyée, en attente de réponse.'};
+  }
+  const [a,b]=[UID,other.id].sort();
+  await q(SB.from('friendships').insert({id,user_a:a,user_b:b,from_id:UID,to_id:other.id}));
+  await loadFriends();renderFriendLists();
+  return {ok:1,msg:'Demande d\'ami envoyée.'};
+}
+function prow(uid,{rank,acts,me}={}){
+  const p=player(uid)||{pseudo:'…',avatar:'zonbi',xp:0};const lv=levelOf(p.xp);
+  return `<div class="prow ${acts&&rank===undefined?'f':''} ${me?'me':''}">${rank!==undefined?`<span class="rk">${rank}</span>`:''}${avatar(p.avatar,40)}
+    <div class="nm"><b>${esc(p.pseudo)}${me?' (toi)':''}</b><small>${esc(lv.name)} · niv. ${lv.i+1}</small></div>
+    ${acts?`<div class="acts">${acts}</div>`:`<span class="xp">${p.xp||0}</span>`}</div>`;
+}
+function renderFriendLists(){
+  const inEl=byId('reqin'),fl=byId('flist');if(!fl)return;
+  const pin=pendingIn();byId('reqbox').hidden=!pin.length;
+  inEl.innerHTML=pin.map(f=>prow(f.from_id,{acts:`<button class="btn sm" data-acc="${esc(f.id)}" type="button">Accepter</button><button class="btn ghost sm" data-ref="${esc(f.id)}" type="button">Refuser</button>`})).join('');
+  const fr=friendsList();
+  fl.innerHTML=fr.length?fr.map(u=>prow(u,{acts:`<button class="btn sm" data-ch="${esc(u)}" data-mode="live" type="button">Défier en direct</button><button class="btn ghost sm" data-ch="${esc(u)}" data-mode="async" type="button">En différé</button>`})).join('')
+    :'<p class="empty">Pas encore d\'amis. Ajoute-les avec leur pseudo.</p>';
+  const po=pendingOut();
+  byId('sentbox').innerHTML=po.length?`<p class="foot" style="text-align:left">En attente : ${po.map(f=>esc((player(f.to_id)||{pseudo:'…'}).pseudo)).join(', ')}</p>`:'';
+  $app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await q(SB.from('friendships').update({status:'accepted'}).eq('id',b.dataset.acc));await loadFriends();renderTabs();renderFriendLists();checkBadges();}catch(e){b.disabled=false;}});
+  $app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await q(SB.from('friendships').delete().eq('id',b.dataset.ref));await loadFriends();renderTabs();renderFriendLists();}catch(e){b.disabled=false;}});
+  $app.querySelectorAll('[data-ch]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const c=await createMatch(b.dataset.mode,settings.dur,b.dataset.ch);openMatch(c);}catch(e){b.disabled=false;toast(dbMsg(e));}});
+}
+
+/* =================== CLASSEMENT =================== */
+let RANKMODE='monde';
+function showRanking(){
+  const lv=levelOf(MEP&&MEP.xp);
+  if(!SB){needAuth();return;}
+  if(SESSION&&hasProfile()&&RANKMODE==='monde'&&friendsList().length)RANKMODE='amis';
+  $app.innerHTML=`
+  <section class="panel">
+    <div class="row" style="justify-content:space-between"><h2>Classement</h2>
+    <div class="seg" role="group" aria-label="Classement"><button type="button" data-rm="amis" aria-pressed="${RANKMODE==='amis'}">Mes amis</button><button type="button" data-rm="monde" aria-pressed="${RANKMODE==='monde'}">Mondial</button></div></div>
+    <div class="plist" id="rank"></div>
+    <p class="foot">Points de classement : les points marqués en ligne et au défi du jour, plus ${XP_WIN} par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</p>
+  </section>
+  <section class="panel"><h3>Les niveaux</h3>
+    <div class="ladder">${LEVELS.map(([min,n],i)=>`<div class="lad ${hasProfile()&&i===lv.i?'cur':''} ${hasProfile()&&i<=lv.i?'got':''}"><b>${i+1}. ${esc(n)}</b><span>dès ${min} pts</span></div>`).join('')}</div>
+  </section>`;
+  $app.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{RANKMODE=b.dataset.rm;$app.querySelectorAll('[data-rm]').forEach(x=>x.setAttribute('aria-pressed',x===b));renderRank();});
+  renderRank();
+}
+function renderRank(){
+  const el=byId('rank');if(!el)return;
+  if(RANKMODE==='amis'){
+    if(!SESSION||!hasProfile()){el.innerHTML='<p class="empty">Connecte-toi et crée ton profil pour te comparer à tes amis.</p>';return;}
+    const ids=[UID,...friendsList()];
+    const list=ids.map(u=>({u,p:player(u)})).sort((a,b)=>((b.p&&b.p.xp)||0)-((a.p&&a.p.xp)||0));
+    el.innerHTML=list.map((x,i)=>prow(x.u,{rank:i+1,me:x.u===UID})).join('')+(ids.length<2?'<p class="empty">Ajoute des amis pour vous comparer.</p>':'');
+  }else{
+    const list=TOP.filter(p=>p.pseudo);const myIdx=list.findIndex(p=>p.uid===UID);
+    el.innerHTML=list.slice(0,100).map((p,i)=>prow(p.uid,{rank:i+1,me:p.uid===UID})).join('')
+      +(hasProfile()&&(myIdx===-1||myIdx>=100)?`<p class="foot">…</p>${prow(UID,{rank:myIdx===-1?'—':myIdx+1,me:true})}`:'')
+      +(list.length?'':'<p class="empty">Le classement est vide pour l\'instant. Joue une partie en ligne pour y entrer.</p>');
+  }
+}
+
+/* =================== EN LIGNE =================== */
+function showOnline(){
+  if(needAuth())return;
+  $app.innerHTML=`
+  <section class="panel" id="invbox"><h3>Invitations reçues</h3><div class="plist" id="invs"></div></section>
+  <section class="panel">
+    <h3>Créer une partie</h3>
+    <div class="seg" role="group" aria-label="Mode"><button type="button" data-m="live" aria-pressed="true">En direct</button><button type="button" data-m="async" aria-pressed="false">En différé</button></div>
+    <p class="muted" id="mdesc" style="font-size:14px"></p>
+    <div class="seg" role="group" aria-label="Durée">${[45,60,90].map(d=>`<button type="button" data-od="${d}" aria-pressed="${settings.dur===d}">${d} s</button>`).join('')}</div>
+    <h3>Territoires</h3>
+    ${terrChips()}
+    <button class="btn wide" id="create" type="button">Créer et obtenir un code</button>
+    <p class="bad" id="cerr" aria-live="polite"></p>
+  </section>
+  <section class="panel">
+    <h3>Rejoindre avec un code</h3>
+    <div class="entry"><input type="text" class="code" id="jc" maxlength="5" placeholder="CODE" autocapitalize="characters"><button class="btn" id="join" type="button">Rejoindre</button></div>
+    <p class="bad" id="jerr" aria-live="polite"></p>
+  </section>
+  <section class="panel"><h3>Mes parties</h3><div class="mlist" id="mlist"></div></section>`;
+  let mode='live',dur=settings.dur;
+  const desc={live:'Vous jouez les manches ensemble : la manche suivante s\'ouvre quand vous avez tous les deux fini la précédente.',async:'Chacun joue ses 5 manches quand il veut. Le résultat s\'affiche quand les deux ont terminé.'};
+  const md=byId('mdesc');md.textContent=desc[mode];
+  $app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;$app.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',x===b));md.textContent=desc[mode];});
+  $app.querySelectorAll('[data-od]').forEach(b=>b.onclick=()=>{dur=+b.dataset.od;$app.querySelectorAll('[data-od]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+  bindTerr();
+  byId('create').onclick=async function(){this.disabled=true;try{const code=await createMatch(mode,dur);openMatch(code);}catch(e){byId('cerr').textContent=dbMsg(e);this.disabled=false;}};
+  byId('join').onclick=async function(){const code=byId('jc').value.trim().toUpperCase(),err=byId('jerr');
+    if(code.length!==5){err.textContent='Le code fait 5 caractères.';return;}
+    this.disabled=true;try{const r=await joinMatch(code);if(r)err.textContent=r;else openMatch(code);}catch(e){err.textContent=dbMsg(e);}this.disabled=false;};
+  renderMatchList();
+}
+function genCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<5;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
+async function createMatch(mode,dur,invite){
+  for(let k=0;k<5;k++){
+    const code=genCode();
+    const {error}=await SB.from('matches').insert({code,host:UID,mode,dur,terr:settings.terr,themes:pickThemes(settings.terr),players:[UID],invite:invite||null,
+      pseudos:{[UID]:myPseudo()},avatars:{[UID]:myAvatar()}});
+    if(!error){await loadMatches();return code;}
+    if(error.code!=='23505')throw error;
+  }
+  throw new Error('code');
+}
+async function joinMatch(code){
+  const msg=await q(SB.rpc('join_match',{p_code:code,p_pseudo:myPseudo(),p_avatar:myAvatar()}));
+  if(!msg){await loadMatches();await loadInvites();renderTabs();}
+  return msg||null;
+}
+function matchStatus(m){
+  const opp=(m.players||[]).find(x=>x!==UID),a=progOf(m,UID),b=opp?progOf(m,opp):null;
+  if(a.r>=ROUNDS&&b&&b.r>=ROUNDS){const w=winnerOf([{id:UID,score:a.score,count:a.count||0},{id:opp,score:b.score,count:b.count||0}]);return {k:'done',txt:w==='tie'?'Match nul':w.id===UID?'Gagnée':'Perdue'};}
+  if(!opp&&m.mode==='live')return {k:'wait',txt:m.invite_status==='declined'?'Invitation refusée':m.invite?'Invitation envoyée':'En attente d\'un adversaire'};
+  if(a.r>=ROUNDS)return {k:'wait',txt:'Au tour de ton adversaire'};
+  if(m.mode==='live'&&b&&b.r<a.r)return {k:'wait',txt:'Ton adversaire joue'};
+  return {k:'turn',txt:'À toi de jouer'};
+}
+function renderMatchList(){
+  const el=byId('mlist');if(!el)return;
+  const inv=openInvites(),ib=byId('invbox');
+  if(ib){ib.hidden=!inv.length;byId('invs').innerHTML=inv.map(m=>{const h=m.host;return `<div class="prow f">${avatar((m.avatars||{})[h],40)}<div class="nm"><b>${esc((m.pseudos||{})[h]||'Un ami')}</b><small>te défie ${m.mode==='live'?'en direct':'en différé'} · ${m.dur} s</small></div><div class="acts"><button class="btn sm" data-ia="${esc(m.code)}" type="button">Jouer</button><button class="btn ghost sm" data-ir="${esc(m.code)}" type="button">Refuser</button></div></div>`;}).join('');
+    $app.querySelectorAll('[data-ia]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const r=await joinMatch(b.dataset.ia);if(!r)openMatch(b.dataset.ia);else{toast(r);b.disabled=false;}}catch(e){b.disabled=false;}});
+    $app.querySelectorAll('[data-ir]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await q(SB.rpc('decline_invite',{p_code:b.dataset.ir}));await loadInvites();renderTabs();renderMatchList();}catch(e){b.disabled=false;}});}
+  if(!MYMATCHES.length){el.innerHTML='<p class="empty">Aucune partie pour l\'instant. Crée-en une, défie un ami ou rejoins une partie avec son code.</p>';return;}
+  el.innerHTML=MYMATCHES.map(m=>{const opp=(m.players||[]).find(x=>x!==UID),st=matchStatus(m),a=progOf(m,UID),b=opp?progOf(m,opp):{score:0};
+    const oppName=opp?(m.pseudos||{})[opp]||'Adversaire':(m.invite&&m.invite_status!=='declined'?((player(m.invite)||{}).pseudo||'…'):'…');
+    return `<button class="mitem" type="button" data-code="${esc(m.code)}"><span class="t1">vs ${esc(oppName)}<span class="badge b-${st.k}">${st.txt}</span></span>
+    <span class="sc2">${a.score} – ${opp?b.score:'?'}</span>
+    <span class="t2">${m.mode==='live'?'En direct':'En différé'}${m.terr&&m.terr.length?' · '+esc(m.terr.map(x=>TERR_NAME[x]).join(', ')):''} · code ${esc(m.code)} · manche ${Math.min(a.r+1,ROUNDS)}/${ROUNDS}</span></button>`;}).join('');
+  el.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>openMatch(b.dataset.code));
+}
+let CUR_M=null,CUR_P={};
+async function fetchCurrent(code){
+  const m=await q(SB.from('matches').select('*').eq('code',code).maybeSingle());
+  const plays=m?await q(SB.from('plays').select('*').eq('code',code)):[];
+  CUR_M=m;CUR_P={};plays.forEach(p=>{CUR_P[p.user_id]=p;});
+}
+function reloadCurrent(){const code=CURRENT;later('cur',async()=>{if(CURRENT!==code||PLAYING)return;try{await fetchCurrent(code);}catch(e){}if(CURRENT===code&&!PLAYING)renderMatch(code,CUR_M,CUR_P);});}
+async function openMatch(code){
+  cleanup();SUMMARY=false;tab='enligne';renderTabs();CURRENT=code;window.scrollTo(0,0);
+  $app.innerHTML=`<section class="panel center pass"><p class="muted">Chargement de la partie ${esc(code)}…</p></section>`;
+  try{await fetchCurrent(code);}catch(e){$app.innerHTML=`<section class="panel"><p class="bad">${esc(dbMsg(e))}</p></section>`;return;}
+  if(CURRENT===code)renderMatch(code,CUR_M,CUR_P);
+}
+function sumPts(p){return p?Object.values(p.rounds||{}).reduce((s,r)=>s+(r.pts||0),0):0;}
+function countFound(p){return p?Object.values(p.rounds||{}).reduce((s,r)=>s+((r.found||[]).length),0):0;}
+function shareLink(code){return `${location.origin}${location.pathname}#${code}`;}
+function shareText(code){return `Viens m'affronter sur Ti Bac Kréyol ! Code de la partie : ${code} — ${shareLink(code)}`;}
+function renderMatch(code,M,P){
+  if(!M){$app.innerHTML=`<section class="panel"><h2>Partie introuvable</h2><p class="muted">Le code ${esc(code)} ne correspond à aucune partie.</p><button class="btn ghost" id="back" type="button">Retour</button></section>`;byId('back').onclick=()=>go('enligne');return;}
+  const opp=M.players.find(x=>x!==UID),mine=P[UID]||{rounds:{}},theirs=opp?(P[opp]||{rounds:{}}):null;
+  const myR=Object.keys(mine.rounds||{}).length,opR=theirs?Object.keys(theirs.rounds||{}).length:0;
+  const myScore=sumPts(mine),opScore=theirs?sumPts(theirs):0;
+  const myName=(M.pseudos||{})[UID]||myPseudo(),opName=opp?((M.pseudos||{})[opp]||'Adversaire'):'…';
+  const myAv=(M.avatars||{})[UID]||myAvatar(),opAv=opp?(M.avatars||{})[opp]:'zonbi';
+  const finished=myR>=ROUNDS&&opR>=ROUNDS;
+  let action='';
+  if(finished){
+    const w=winnerOf([{id:UID,score:myScore,count:countFound(mine)},{id:opp,score:opScore,count:countFound(theirs)}]);
+    const res=w==='tie'?'tie':w.id===UID?'win':'loss';
+    awardMatch(code,res);
+    if(!CELEBRATED[code]){CELEBRATED[code]=1;if(res==='win'){setTimeout(()=>{SFX.win();confetti();},200);}else if(res==='loss')SFX.lose();}
+    action=`<section class="panel center pass"><h3>Partie terminée</h3><p class="big">${res==='tie'?'Match nul !':res==='win'?'Tu gagnes !':esc(opName)+' gagne'}</p><p class="muted">${esc(myName)} ${myScore} – ${opScore} ${esc(opName)} · +${res==='win'?XP_WIN:res==='tie'?XP_TIE:XP_PLAY} pts de bonus au classement</p><button class="btn" id="rematch" type="button">Revanche</button></section>`;
+  }else if(myR>=ROUNDS){
+    action=`<section class="panel center"><h3>Tu as fini tes ${ROUNDS} manches</h3><p class="muted">${opp?`En attente de ${esc(opName)} (${opR}/${ROUNDS} manches jouées).`:'En attente d\'un adversaire.'} Le résultat s'affichera ici automatiquement.</p></section>`;
+  }else{
+    const blocked=M.mode==='live'&&(!opp||opR<myR);
+    action=`<section class="panel center">${blocked?`<h3>Manche ${myR+1}</h3><p class="muted">${!opp?'En attente de ton adversaire. Envoie-lui le code ou le lien ci-dessus.':`${esc(opName)} termine la manche ${opR+1}. La tienne s'ouvre dès qu'il ou elle a fini.`}</p>`
+      :`<h3>Manche ${myR+1} sur ${ROUNDS}</h3><button class="btn wide" id="playnext" type="button">Jouer la manche ${myR+1}</button><p class="foot">Une manche commencée compte, même si tu quittes la page.</p>`}</section>`;
+  }
+  $app.innerHTML=`
+  <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="back" type="button">← Mes parties</button><span class="muted" style="font-size:14px">${M.mode==='live'?'En direct':'En différé'} · ${M.dur} s par manche</span></div>
+  ${opp?'':`<section class="panel"><h3>Invite ton adversaire</h3><div class="codebox"><b>${esc(code)}</b><button class="btn sm" id="copycode" type="button">Copier le code</button></div>
+    <div class="row"><button class="btn ghost grow" id="sharelink" type="button">Partager le lien d'invitation</button><button class="btn ghost grow" id="copymsg" type="button">Copier le message</button></div>
+    <p class="muted" style="font-size:14px">Ton adversaire ouvre le lien, ou saisit le code dans « En ligne ».${M.mode==='async'?' Tu peux commencer à jouer sans attendre.':''}</p></section>`}
+  <div class="scoreline">
+    <div class="sc ${finished&&myScore>opScore?'win':''}"><div class="vs">${avatar(myAv,44)}<span class="n">${esc(myName)} (toi)</span></div><span class="v">${myScore}</span><span class="d">${myR}/${ROUNDS} manches</span></div>
+    <div class="sc ${finished&&opScore>myScore?'win':''}"><div class="vs">${avatar(opAv,44)}<span class="n">${esc(opName)}</span></div><span class="v">${opp?opScore:'–'}</span><span class="d">${opp?`${opR}/${ROUNDS} manches`:'pas encore arrivé'}</span></div>
+  </div>
+  ${action}
+  <section class="panel"><h3>Manches</h3>
+  <div class="scroll"><table class="tbl"><thead><tr><th>Thème</th><th class="num">Toi</th><th class="num">${esc(opName.slice(0,9))}</th><th></th></tr></thead><tbody>
+  ${M.themes.map((ti,r)=>{const iPlayed=r<myR,oPlayed=r<opR;
+    return `<tr><td>${iPlayed?esc(THEMES[ti].t):`<span class="dash">Manche ${r+1} · thème caché</span>`}</td>
+    <td class="num">${iPlayed?((mine.rounds[r]||{}).pts||0):'–'}</td>
+    <td class="num">${oPlayed?(iPlayed?((theirs.rounds[r]||{}).pts||0):'✓'):'–'}</td>
+    <td>${iPlayed?`<button class="btn ghost sm" data-det="${r}" type="button">Réponses</button>`:''}</td></tr>`;}).join('')}
+  </tbody></table></div>
+  <p class="foot">Les réponses de ton adversaire s'affichent pour une manche une fois que tu l'as jouée.</p></section>
+  <div id="detail"></div>`;
+  byId('back').onclick=()=>go('enligne');
+  const c1=byId('copycode');if(c1)c1.onclick=()=>copyText(code,c1);
+  const c2=byId('sharelink');if(c2)c2.onclick=async()=>{
+    if(navigator.share){try{await navigator.share({title:'Ti Bac Kréyol',text:`Viens m'affronter sur Ti Bac Kréyol ! Code : ${code}`,url:shareLink(code)});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+    copyText(shareLink(code),c2,'Lien copié !');};
+  const c3=byId('copymsg');if(c3)c3.onclick=()=>copyText(shareText(code),c3,'Message copié !');
+  const pn=byId('playnext');if(pn)pn.onclick=()=>playOnline(code,M,mine,myR);
+  const rm=byId('rematch');if(rm)rm.onclick=async()=>{rm.disabled=true;try{if(M.terr&&M.terr.length)settings.terr=M.terr;const c=await createMatch(M.mode,M.dur,opp);openMatch(c);}catch(e){rm.disabled=false;}};
+  $app.querySelectorAll('[data-det]').forEach(b=>b.onclick=()=>{const r=+b.dataset.det,th=prep(M.themes[r]);
+    const cols=[{name:'Toi',found:(mine.rounds[r]||{}).found||[]}];if(theirs&&r<opR)cols.push({name:opName,found:(theirs.rounds[r]||{}).found||[]});
+    const d=byId('detail');d.innerHTML=`<section class="panel"><h3>Manche ${r+1}</h3><h2>${esc(th.title)}</h2>${answersTable(th,cols)}</section>`;d.scrollIntoView({behavior:'smooth'});});
+}
+async function awardMatch(code,res){
+  if(!MEP||AWARDING[code]||(MEP.counted||[]).includes(code))return;
+  AWARDING[code]=1;
+  const bonus=res==='win'?XP_WIN:res==='tie'?XP_TIE:XP_PLAY;
+  const upd={xp:(MEP.xp||0)+bonus,games:(MEP.games||0)+1,wins:(MEP.wins||0)+(res==='win'?1:0),counted:[...(MEP.counted||[]),code].slice(-200)};
+  try{await q(SB.from('profiles').update(upd).eq('id',UID));MEP={...MEP,...upd};checkBadges();}catch(e){AWARDING[code]=0;}
+}
+async function savePlay(code,rounds,jokers){
+  const vals=Object.values(rounds);
+  await q(SB.from('plays').upsert({code,user_id:UID,rounds,jokers,r:vals.length,score:vals.reduce((s,x)=>s+(x.pts||0),0),found_count:vals.reduce((s,x)=>s+((x.found||[]).length),0),updated_at:new Date().toISOString()}));
+}
+async function playOnline(code,M,mine,r){
+  cleanup();
+  const rounds={...(mine.rounds||{})};const jokers={...(mine.jokers||{time:1,hint:2})};
+  rounds[r]={found:[],pts:0,done:false};
+  try{await savePlay(code,rounds,jokers);}catch(e){$app.innerHTML=`<section class="panel"><p class="bad">${esc(dbMsg(e))}</p></section>`;return;}
+  const th=prep(M.themes[r]),base=sumPts({rounds:mine.rounds});
+  playRound({who:myPseudo(),label:`Manche ${r+1}/${ROUNDS} · en ligne`,th,dur:M.dur,jokers,score:base,
+    onFinish:async(found,pts,rej)=>{
+      rounds[r]={found,pts,done:true};
+      $app.innerHTML=`<section class="panel center pass"><h3>Manche ${r+1} terminée</h3><p class="big">+${pts}</p><p class="muted">Enregistrement…</p></section>`;
+      let saved=true;
+      try{await savePlay(code,rounds,jokers);await recordRound(M.themes[r],found,pts);}catch(e){saved=false;}
+      if(!saved)toast('Enregistrement impossible : vérifie ta connexion. Ta manche sera comptée à 0 si elle n\'est pas sauvegardée.');
+      afterRound({title:`Manche ${r+1} terminée`,t:M.themes[r],found,pts,rej,btn:'Retour à la partie',next:()=>openMatch(code)});
+    }});
+}
+
+/* =================== SIGNALEMENTS =================== */
+function reportBlock(t,rej){
+  const uniq=[];const seen=new Set();(rej||[]).forEach(v=>{const k=norm(v,prep(t).extra);if(k&&!seen.has(k)){seen.add(k);uniq.push(v);}});
+  if(!uniq.length)return '';
+  const can=SB&&SESSION&&hasProfile();
+  return `<section class="panel"><h3>Réponses refusées</h3>
+  <p class="muted" style="font-size:14px">${can?'Tu penses qu\'une de ces réponses est correcte ? Signale-la : elle sera vérifiée et peut-être ajoutée au jeu.':'Connecte-toi (onglet Connexion) pour pouvoir signaler une réponse.'}</p>
+  <div class="replist">${uniq.map(v=>{const done=MYREPORTS.some(r=>r.theme===t&&norm(r.answer,prep(t).extra)===norm(v,prep(t).extra));
+    return `<div class="rep"><span>${esc(v)}</span>${can?`<button class="btn ghost sm" type="button" data-rep="${esc(v)}" data-rt="${t}" ${done?'disabled':''}>${done?'Signalée':'Signaler'}</button>`:''}</div>`;}).join('')}</div></section>`;
+}
+function bindReports(){
+  $app.querySelectorAll('[data-rep]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;b.textContent='Envoi…';
+    try{const a=String(b.dataset.rep).slice(0,40),t=+b.dataset.rt;await q(SB.from('reports').insert({user_id:UID,theme:t,answer:a}));MYREPORTS.push({theme:t,answer:a,status:'new'});b.textContent='Signalée';}
+    catch(e){b.textContent='Échec, réessaie';b.disabled=false;}
+  });
+}
+function pendingReports(){
+  const groups={};
+  ALLREPORTS.forEach(it=>{
+    if(it.status!=='new'||!THEMES[it.theme])return;
+    const th=prep(it.theme),k=norm(it.answer,th.extra);
+    if(th.answers.some(x=>x.keys.includes(k)))return;
+    const key=it.theme+'|'+k;
+    const g=(groups[key]=groups[key]||{t:it.theme,a:it.answer,key,k,ids:[],who:[]});g.ids.push(it.id);g.who.push(it.user_id);
+  });
+  return Object.values(groups).sort((x,y)=>y.ids.length-x.ids.length);
+}
+
+/* =================== DÉFI DU JOUR =================== */
+let DAILY_LIST=[];
+async function loadDailyList(){
+  if(!SB)return;
+  try{DAILY_LIST=await q(SB.from('dailyscores').select('*').eq('last',todayKey()).eq('done',true).order('last_pts',{ascending:false}).limit(100));}catch(e){}
+}
+function showDaily(){
+  if(needAuth())return;
+  if(!MYDAILY_LOADED){$app.innerHTML=`<section class="panel center pass"><p class="muted">Chargement du défi…</p></section>`;return;}
+  const d=todayKey(),t=dailyTheme(d),pv=dailyProverb(d),th=prep(t);
+  const dateFr=new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  $app.innerHTML=`
+  <section class="panel">
+    <h3>Défi du ${esc(dateFr)}</h3>
+    <div class="theme-card"><h3 style="color:var(--gold)">Thème du jour</h3><h2>${esc(th.title)}</h2><p class="count">${th.answers.length} réponses · 60 secondes · 1 indice · une seule tentative</p></div>
+    <div id="dstate"></div>
+  </section>
+  <section class="panel proverb"><h3>Pwovèb jodi a</h3><p class="pv">${esc(pv[0])}</p><p class="muted">${esc(pv[1])}</p></section>
+  <section class="panel"><h3>Classement du jour</h3><div class="plist" id="drank"></div>
+    <p class="foot">Le défi change chaque jour à minuit, heure des Antilles. Les points du défi comptent pour ton niveau.</p></section>`;
+  loadDailyList().then(renderDaily);
+  renderDaily();
+}
+function renderDaily(){
+  const st=byId('dstate');if(!st)return;
+  const d=todayKey(),played=MYDAILY&&MYDAILY.last===d;
+  if(!played){st.innerHTML=`<button class="btn wide" id="dplay" type="button">Relever le défi</button>`;byId('dplay').onclick=playDaily;}
+  else if(!MYDAILY.done)st.innerHTML=`<p class="muted">Tu as commencé le défi d'aujourd'hui sans le terminer. Reviens demain pour un nouveau thème !</p>`;
+  else st.innerHTML=`<div class="scoreline"><div class="sc"><span class="n">Ton score du jour</span><span class="v">${MYDAILY.last_pts}</span><span class="d">${MYDAILY.last_found} réponses · ${MYDAILY.count||1} défi${(MYDAILY.count||1)>1?'s':''} joué${(MYDAILY.count||1)>1?'s':''}</span></div></div>`;
+  const el=byId('drank');if(!el)return;
+  el.innerHTML=DAILY_LIST.length?DAILY_LIST.map((x,i)=>{const p=player(x.user_id)||{pseudo:'…',avatar:x.avatar,xp:0};
+    return `<div class="prow ${x.user_id===UID?'me':''}"><span class="rk">${i+1}</span>${avatar(p.avatar||x.avatar,40)}<div class="nm"><b>${esc(p.pseudo||'Joueur')}${x.user_id===UID?' (toi)':''}</b><small>${x.last_found} réponses</small></div><span class="xp">${x.last_pts}</span></div>`;}).join('')
+    :'<p class="empty">Personne n\'a encore joué aujourd\'hui. Sois le premier ou la première !</p>';
+}
+async function playDaily(){
+  const d=todayKey(),t=dailyTheme(d),th=prep(t);
+  const count=((MYDAILY&&MYDAILY.count)||0)+1;
+  try{await q(SB.from('dailyscores').upsert({user_id:UID,avatar:myAvatar(),last:d,last_pts:0,last_found:0,count,done:false,updated_at:new Date().toISOString()}));MYDAILY={user_id:UID,last:d,last_pts:0,last_found:0,count,done:false};}
+  catch(e){$app.innerHTML=`<section class="panel"><p class="bad">${esc(dbMsg(e))}</p></section>`;return;}
+  playRound({who:myPseudo(),label:'Défi du jour',th,dur:60,jokers:{time:0,hint:1},score:0,
+    onFinish:async(found,pts,rej)=>{
+      $app.innerHTML=`<section class="panel center pass"><h3>Défi terminé</h3><p class="big">+${pts}</p><p class="muted">Enregistrement…</p></section>`;
+      try{await q(SB.from('dailyscores').update({last_pts:pts,last_found:found.length,done:true,updated_at:new Date().toISOString()}).eq('user_id',UID));
+        MYDAILY={...MYDAILY,last_pts:pts,last_found:found.length,done:true};await recordRound(t,found,pts,{daily:count});}catch(e){toast(dbMsg(e));}
+      afterRound({title:'Défi du jour terminé',t,found,pts,rej,btn:'Voir le classement du jour',next:()=>go('defi')});
+    }});
+}
+
+/* =================== ADMIN =================== */
+function showAdmin(){
+  if(!IS_OWNER){$app.innerHTML=`<section class="panel"><p class="muted">Cet espace est réservé à l'éditrice du jeu.</p></section>`;return;}
+  $app.innerHTML=`
+  <section class="panel"><h2>Espace admin</h2><p class="muted">Visible uniquement par toi. Les réponses que tu ajoutes ici sont acceptées tout de suite dans toutes les parties.</p></section>
+  <section class="panel"><h3>Signalements à traiter</h3><div id="adm" class="plist"></div></section>
+  <section class="panel"><h3>Ajouter une réponse</h3>
+    <label class="fld">Thème<select id="at">${activeThemes(null).map(i=>`<option value="${i}">${esc(THEMES[i].t)}${THEMES[i].terr!=='AN'?' ('+esc(TERR_NAME[THEMES[i].terr])+')':''}</option>`).join('')}</select></label>
+    <div class="row"><label class="fld grow">Réponse<input type="text" id="aa" maxlength="40" placeholder="Ex. : Anse Noire"></label>
+    <label class="fld grow">Variantes acceptées (séparées par des virgules)<input type="text" id="av" maxlength="120" placeholder="Ex. : anse nwè"></label></div>
+    <div class="row"><div class="seg" role="group" aria-label="Points"><button type="button" data-ap="1" aria-pressed="true">1 pt</button><button type="button" data-ap="2" aria-pressed="false">2 pts</button><button type="button" data-ap="3" aria-pressed="false">3 pts</button></div>
+    <button class="btn" id="aadd" type="button">Ajouter</button><span id="amsg" aria-live="polite"></span></div>
+  </section>
+  <section class="panel"><h3>Réponses ajoutées</h3><div id="aextras"></div></section>`;
+  let pts=1;
+  $app.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>{pts=+b.dataset.ap;$app.querySelectorAll('[data-ap]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+  byId('aadd').onclick=async()=>{
+    const t=+byId('at').value,a=byId('aa').value.trim(),msg=byId('amsg');
+    const alias=byId('av').value.split(',').map(x=>x.trim()).filter(Boolean);
+    const r=await addExtra(t,a,pts,alias);msg.className=r.ok?'ok':'bad';msg.textContent=r.msg;if(r.ok){byId('aa').value='';byId('av').value='';}
+  };
+  renderAdmin();
+}
+function cleanAnswer(a){return String(a).replace(/[|,*]/g,' ').replace(/\s+/g,' ').trim().slice(0,40);}
+async function addExtra(t,a,pts,alias,ids){
+  a=cleanAnswer(a);if(a.length<2)return {msg:'Réponse trop courte.'};
+  const th=prep(t),k=norm(a,th.extra);
+  if(th.answers.some(x=>x.keys.includes(k)))return {msg:'Cette réponse est déjà acceptée.'};
+  try{await q(SB.from('extras').insert({theme:t,name:a,pts,alias:(alias||[]).map(cleanAnswer).filter(Boolean)}));}catch(e){return {msg:dbMsg(e)};}
+  const toMark=ids||pendingReports().filter(g=>g.t===t&&g.k===k).flatMap(g=>g.ids);
+  if(toMark.length){try{await q(SB.from('reports').update({status:'ok',treated_at:new Date().toISOString()}).in('id',toMark));}catch(e){}}
+  await loadExtras();await loadAllReports();renderTabs();renderAdmin();
+  return {ok:1,msg:`« ${a} » ajoutée (${pts} pt${pts>1?'s':''}).`};
+}
+function renderAdmin(){
+  const el=byId('adm');if(!el)return;
+  const pend=pendingReports();
+  el.innerHTML=pend.length?pend.map((g,i)=>`<div class="prow f"><span class="av" style="display:grid;place-items:center;background:var(--card2);font-family:var(--mono);font-weight:700;color:var(--gold)">${g.ids.length}</span>
+    <div class="nm"><b>${esc(g.a)}</b><small>${esc(THEMES[g.t].t)} · signalé par ${esc([...new Set(g.who.map(u=>(player(u)||{pseudo:'…'}).pseudo))].join(', '))}</small></div>
+    <div class="acts"><button class="btn sm" data-ok="${i}" data-p="1" type="button">+1</button><button class="btn sm" data-ok="${i}" data-p="2" type="button">+2</button><button class="btn sm" data-ok="${i}" data-p="3" type="button">+3</button><button class="btn ghost sm" data-no="${i}" type="button">Rejeter</button></div></div>`).join('')
+    :'<p class="empty">Aucun signalement en attente.</p>';
+  el.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{b.disabled=true;const g=pend[+b.dataset.ok];const r=await addExtra(g.t,g.a,+b.dataset.p,[],g.ids);toast(r.msg);});
+  el.querySelectorAll('[data-no]').forEach(b=>b.onclick=async()=>{b.disabled=true;const g=pend[+b.dataset.no];try{await q(SB.from('reports').update({status:'no',treated_at:new Date().toISOString()}).in('id',g.ids));await loadAllReports();renderTabs();renderAdmin();}catch(e){b.disabled=false;}});
+  const ex=byId('aextras');if(!ex)return;
+  const rows=[];Object.keys(EXTRA).forEach(t=>(EXTRA[t]||[]).forEach(x=>rows.push({t:+t,x})));
+  ex.innerHTML=rows.length?`<div class="scroll"><table class="tbl"><thead><tr><th>Réponse</th><th>Thème</th><th>Pts</th><th></th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${esc(r.x.name)}${(r.x.alias||[]).length?`<br><small class="muted">${esc(r.x.alias.join(', '))}</small>`:''}</td><td>${esc((THEMES[r.t]||{t:'?'}).t)}</td><td>${ptsLabel(r.x.pts)}</td><td><button class="btn ghost sm" data-del="${i}" type="button">Retirer</button></td></tr>`).join('')}</tbody></table></div>`
+    :'<p class="empty">Aucune réponse ajoutée pour l\'instant.</p>';
+  ex.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{b.disabled=true;const r=rows[+b.dataset.del];try{await q(SB.from('extras').delete().eq('id',r.x.id));await loadExtras();renderAdmin();}catch(e){b.disabled=false;}});
+}
+
+/* =================== INSTALLER L'APPLI =================== */
+let INSTALL_EVT=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();INSTALL_EVT=e;const b=byId('install');if(b)b.hidden=false;});
+function isStandalone(){return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;}
+function installPanel(){
+  if(isStandalone())return '';
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  return `<section class="panel"><h3>Installer l'appli</h3>
+  ${ios?'<p class="muted" style="font-size:14px">Sur iPhone : ouvre ce site dans Safari, touche le bouton Partager (le carré avec une flèche), puis « Sur l\'écran d\'accueil ».</p>'
+  :'<p class="muted" style="font-size:14px">Ajoute Ti Bac Kréyol à l\'écran d\'accueil de ton téléphone pour l\'ouvrir comme une appli.</p><button class="btn ghost" id="install" type="button" '+(INSTALL_EVT?'':'hidden')+'>Installer sur ce téléphone</button><p class="foot" style="text-align:left">Si le bouton n\'apparaît pas : menu du navigateur (⋮), puis « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».</p>'}</section>`;
+}
+function bindInstall(){const b=byId('install');if(b)b.onclick=async()=>{if(!INSTALL_EVT)return;INSTALL_EVT.prompt();try{await INSTALL_EVT.userChoice;}catch(e){}INSTALL_EVT=null;b.hidden=true;};}
+
+/* =================== BADGES =================== */
+const BADGES=[
+ {k:'debut',n:'Premier pas',d:'Terminer une partie en ligne',ok:s=>s.games>=1},
+ {k:'win1',n:'Première victoire',d:'Gagner une partie en ligne',ok:s=>s.wins>=1},
+ {k:'win10',n:'10 victoires',d:'Gagner 10 parties en ligne',ok:s=>s.wins>=10},
+ {k:'win50',n:'Gran konbatan',d:'Gagner 50 parties en ligne',ok:s=>s.wins>=50},
+ {k:'perfect',n:'Premier sans-faute',d:'Trouver toutes les réponses d\'une manche',ok:s=>s.perfect>=1},
+ {k:'communes',n:'Maître des communes',d:'Trouver 25 communes de Martinique en une manche',ok:s=>(s.best[0]||0)>=25},
+ {k:'karukera',n:'Karukera',d:'Trouver 20 communes de Guadeloupe en une manche',ok:s=>(s.best[12]||0)>=20},
+ {k:'lagwiyann',n:'Lagwiyann',d:'Trouver 15 communes de Guyane en une manche',ok:s=>(s.best[13]||0)>=15},
+ {k:'mangrove',n:'Gardien de la mangrove',d:'Trouver 10 espèces de la mangrove en une manche',ok:s=>(s.best[21]||0)>=10},
+ {k:'rare1',n:'Dénicheur',d:'Trouver une réponse très rare',ok:s=>s.rare3>=1},
+ {k:'rare25',n:'Chasseur de raretés',d:'Trouver 25 réponses très rares',ok:s=>s.rare3>=25},
+ {k:'daily7',n:'Fidèle au défi',d:'Jouer 7 défis du jour',ok:s=>s.daily>=7},
+ {k:'daily30',n:'Tout-bonnement fidèle',d:'Jouer 30 défis du jour',ok:s=>s.daily>=30},
+ {k:'friends5',n:'Bon zanmi',d:'Avoir 5 amis',ok:s=>s.friends>=5},
+ {k:'metkont',n:'Mèt Kont',d:'Atteindre 4 000 points de classement',ok:s=>s.xp>=4000}
+];
+function badgeStats(){const m=MEP||{};return {games:m.games||0,wins:m.wins||0,perfect:m.perfect||0,rare3:m.rare3||0,best:m.best||{},daily:m.daily||0,xp:m.xp||0,friends:friendsList().length};}
+function earnedBadges(){if(!MEP)return [];const s=badgeStats();return BADGES.filter(b=>b.ok(s)).map(b=>b.k);}
+function checkBadges(){
+  const now=earnedBadges();
+  if(EARNED!==null){now.filter(k=>!EARNED.includes(k)).forEach(k=>toast(`Nouveau badge : ${BADGES.find(b=>b.k===k).n} !`));}
+  EARNED=now;
+}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4200);}
+function badgeGrid(){
+  const got=earnedBadges();
+  return `<div class="badges">${BADGES.map(b=>{const g=got.includes(b.k);return `<div class="badge2 ${g?'got':''}"><span class="medal" aria-hidden="true">${g?'★':'☆'}</span><b>${esc(b.n)}</b><span>${esc(b.d)}</span></div>`;}).join('')}</div>`;
+}
+
+
+/* =================== SONS & CONFETTIS =================== */
+let AC=null;
+function ac(){if(!settings.sound)return null;try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){AC=null;}return AC;}
+function tone(freq,start,dur,type,vol){const c=ac();if(!c)return;try{const o=c.createOscillator(),g=c.createGain(),t0=c.currentTime+start;
+  o.type=type||'sine';o.frequency.setValueAtTime(freq,t0);g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol||0.14,t0+0.015);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+dur+0.05);}catch(e){}}
+const SFX={
+  good(p){const n=[659,880,1175].slice(0,Math.max(2,p||1));n.forEach((f,i)=>tone(f,i*0.07,0.16,'triangle',0.13));},
+  bad(){tone(196,0,0.18,'square',0.05);tone(147,0.09,0.2,'square',0.05);},
+  dup(){tone(440,0,0.1,'sine',0.08);tone(440,0.13,0.1,'sine',0.08);},
+  end(){[523,659,784].forEach((f,i)=>tone(f,i*0.12,0.25,'triangle',0.12));},
+  win(){[523,659,784,1047,784,1047].forEach((f,i)=>tone(f,i*0.11,i===5?0.5:0.18,'triangle',0.14));},
+  lose(){[392,349,330,262].forEach((f,i)=>tone(f,i*0.16,0.28,'sine',0.1));}
+};
+function confetti(){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const cv=document.createElement('canvas');cv.className='confetti';document.body.appendChild(cv);
+  const ctx=cv.getContext&&cv.getContext('2d'),dpr=window.devicePixelRatio||1;if(!ctx){cv.remove();return;}
+  const size=()=>{cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;};size();
+  const cols=['#E4483B','#F6B930','#3DB57F','#3E8FD6','#B993F4','#F6F1E4'];
+  const P=Array.from({length:160},(_,i)=>{const left=i%2===0;return {x:(left?0.1:0.9)*cv.width,y:cv.height*0.75,vx:(left?1:-1)*(3+Math.random()*9)*dpr,vy:-(10+Math.random()*12)*dpr,
+    w:(6+Math.random()*6)*dpr,h:(3+Math.random()*5)*dpr,r:Math.random()*6,vr:(Math.random()-.5)*0.4,c:cols[i%cols.length]};});
+  const t0=performance.now();
+  (function frame(t){const el=t-t0;ctx.clearRect(0,0,cv.width,cv.height);
+    P.forEach(p=>{p.vy+=0.35*dpr;p.vx*=0.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.globalAlpha=Math.max(0,1-el/3800);ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();});
+    if(el<3800)requestAnimationFrame(frame);else cv.remove();})(t0);
+}
+
+/* =================== RÈGLEMENT =================== */
+function showRules(){
+  $app.innerHTML=`<section class="panel"><h2>Règlement du jeu</h2><div class="prose">
+  <section><span class="art">ARTICLE 1</span><h4>Objet</h4><p>Ti Bac Kréyol est un jeu de listes sur la culture de la Martinique et des Antilles. Le but est de citer, pour chaque thème, le plus grand nombre de réponses correctes avant la fin du temps imparti.</p></section>
+  <section><span class="art">ARTICLE 2</span><h4>Déroulement d'une partie</h4><ul><li>Une partie compte ${ROUNDS} manches.</li><li>Avant la partie, on choisit un ou plusieurs territoires : Martinique, Guadeloupe, Guyane, Saint-Martin, Saint-Barthélemy.</li><li>Chaque manche porte sur un thème tiré au sort parmi ceux des territoires choisis et les thèmes communs aux Antilles et à la Guyane (${activeThemes(null).length} thèmes en tout). Un thème n'apparaît qu'une fois par partie.</li><li>La durée d'une manche est de 45, 60 ou 90 secondes, choisie à la création de la partie.</li><li>La manche s'arrête à la fin du chrono, quand toutes les réponses ont été trouvées, ou quand le joueur choisit de la terminer.</li></ul></section>
+  <section><span class="art">ARTICLE 3</span><h4>Barème</h4><ul><li>Réponse classique : 1 point.</li><li>Réponse rare : 2 points.</li><li>Réponse très rare : 3 points.</li><li>Une réponse déjà trouvée ou absente de la liste ne rapporte rien et n'enlève aucun point.</li></ul></section>
+  <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Certaines graphies créoles courantes sont acceptées (par exemple Foyal, zandoli, konpè Lapen).</p></section>
+  <section><span class="art">ARTICLE 5</span><h4>Jokers</h4><ul><li>+15 secondes : prolonge une manche de 15 secondes. Un seul par partie.</li><li>Indice : affiche les deux premières lettres et la longueur d'une réponse non trouvée. Deux par partie.</li></ul></section>
+  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, en direct : chaque joueur sur son téléphone. La manche suivante s'ouvre quand l'adversaire a terminé la précédente.</li><li>En ligne, en différé : chaque joueur joue ses ${ROUNDS} manches quand il le souhaite. Le résultat s'affiche quand les deux ont terminé.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
+  <section><span class="art">ARTICLE 7</span><h4>Fin de partie et égalité</h4><p>Le joueur qui totalise le plus de points à l'issue des ${ROUNDS} manches gagne. En cas d'égalité de points, la victoire revient au joueur qui a trouvé le plus de réponses. Si l'égalité persiste, la partie est déclarée nulle.</p></section>
+  <section><span class="art">ARTICLE 8</span><h4>Profil, pseudo et amis</h4><ul><li>Pour jouer en ligne, chaque joueur crée un compte gratuit (adresse e-mail et mot de passe), puis un profil avec un pseudo unique et un personnage des contes créoles.</li><li>Le pseudo doit rester correct : pas d'insulte, pas d'usurpation d'identité. L'éditeur peut modifier ou supprimer un pseudo inapproprié.</li><li>On ajoute un ami en saisissant son pseudo. L'amitié est confirmée quand l'autre joueur accepte la demande.</li></ul></section>
+  <section><span class="art">ARTICLE 9</span><h4>Classement et niveaux</h4><ul><li>Seules les parties en ligne comptent pour le classement.</li><li>Points de classement : tous les points marqués en ligne, plus ${XP_WIN} points par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</li><li>Deux classements : entre amis, et mondial (tous les joueurs).</li><li>Niveaux : ${LEVELS.map(([m,n])=>`${n} (${m})`).join(', ')}.</li></ul></section>
+  <section><span class="art">ARTICLE 10</span><h4>Défi du jour</h4><ul><li>Chaque jour, un thème est tiré au sort et proposé à tous les joueurs. Il change à minuit, heure des Antilles.</li><li>Une seule tentative par jour, de 60 secondes, avec un indice. Une tentative commencée compte, même si elle n'est pas terminée.</li><li>Un classement du jour réunit tous les participants. Les points du défi s'ajoutent aux points de classement.</li></ul></section>
+  <section><span class="art">ARTICLE 11</span><h4>Badges</h4><p>Des badges récompensent certains exploits : ${BADGES.map(b=>`${esc(b.n)} (${esc(b.d.toLowerCase())})`).join(', ')}.</p></section>
+  <section><span class="art">ARTICLE 12</span><h4>Fair-play</h4><ul><li>Les recherches sur internet, les livres et l'aide d'une autre personne sont interdits pendant une manche.</li><li>En ligne, une manche commencée est comptée même si le joueur quitte la page.</li><li>Le thème d'une manche en ligne reste caché tant que le joueur ne l'a pas jouée.</li></ul></section>
+  <section><span class="art">ARTICLE 13</span><h4>Signaler une réponse</h4><p>Les listes de réponses peuvent contenir des oublis ou des erreurs. À la fin de chaque manche, le joueur peut signaler une réponse refusée qu'il pense correcte. L'éditrice examine chaque signalement et décide de l'ajouter ou non, avec le nombre de points qu'elle juge juste. Une réponse ajoutée est acceptée dans les parties suivantes ; les résultats déjà enregistrés ne sont pas modifiés.</p></section>
+  </div></section>`;
+}
+
+
+/* =================== MENTIONS LÉGALES =================== */
+function showLegal(){
+  const MAIL='vizib.contact@gmail.com';
+  $app.innerHTML=`<section class="panel"><h2>Mentions légales</h2>
+  <div class="prose">
+  <section><h4>Éditrice</h4><p>Ti Bac Kréyol est un projet édité par Maureen, à titre personnel et non professionnel.</p><p>Directrice de la publication : Maureen.</p><p>Contact : <span class="sel">${MAIL}</span> <button class="btn ghost sm" id="cpmail" type="button">Copier</button></p>
+  <p class="muted" style="font-size:14px">Conformément à l'article 6, III, 2° de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique, l'éditrice, agissant à titre non professionnel, ne rend pas publiques ses coordonnées personnelles ; son identité est connue de l'hébergeur.</p></section>
+  <section><h4>Hébergement</h4><p>Le site est hébergé par Vercel Inc. (vercel.com). Les comptes et les données de jeu sont hébergés par Supabase (supabase.com).</p></section>
+  <section><h4>Propriété intellectuelle</h4><p>Le concept, la présentation, les illustrations des personnages, les textes et les listes de réponses de Ti Bac Kréyol sont la propriété de l'éditrice. Toute reproduction sans autorisation est interdite. Les personnages représentés sont issus des contes, légendes et carnavals traditionnels des Antilles et de la Guyane. Les noms de marques cités dans les thèmes appartiennent à leurs propriétaires et sont mentionnés à titre informatif, sans partenariat.</p></section>
+  <section><h4>Contenus</h4><p>Les listes de réponses ont été établies à partir de connaissances générales sur les Antilles et la Guyane. Elles ne sont pas exhaustives et peuvent contenir des erreurs. Tout signalement est bienvenu, depuis le jeu ou à l'adresse de contact.</p></section>
+  <section><h4>Données personnelles</h4><ul>
+    <li>Données traitées : ton adresse e-mail (pour la connexion), un identifiant technique de compte, ton pseudo, ton personnage, ta liste d'amis et les demandes d'amis, tes résultats (réponses trouvées, points, victoires, niveau, badges, scores du défi du jour) et les réponses que tu signales. Ton mot de passe est chiffré et n'est jamais visible par l'éditrice.</li>
+    <li>Visibilité : ton pseudo, ton personnage, ton niveau et tes points sont visibles par les autres joueurs, notamment dans les classements. Ton adresse e-mail n'est jamais affichée. Les réponses signalées ne sont visibles que par l'éditrice.</li>
+    <li>Finalité : faire fonctionner les comptes, les parties en ligne, le système d'amis, les classements et l'amélioration des listes. Aucune donnée n'est vendue ni utilisée à des fins publicitaires.</li>
+    <li>Durées de conservation : le compte et le profil sont supprimés après 2 ans sans connexion, ou immédiatement sur demande ; les parties en ligne et les scores sont conservés 12 mois ; les réponses signalées sont conservées 12 mois après leur traitement.</li>
+    <li>Tu peux supprimer toi-même ton compte et toutes tes données depuis l'onglet Connexion (« Supprimer mon compte »).</li>
+    <li>Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'opposition et de suppression de tes données. Pour l'exercer, écris à ${MAIL}. Tu peux aussi adresser une réclamation à la CNIL (cnil.fr).</li>
+  </ul></section>
+  <section><h4>Stockage local</h4><p>Le jeu enregistre dans ton navigateur ta session de connexion et tes préférences (noms des joueurs, durée des manches, territoires choisis, sons), et garde une copie des fichiers du jeu pour s'ouvrir plus vite. Il n'utilise pas de cookies publicitaires ni de traceurs tiers.</p></section>
+  <section><h4>Mise à jour</h4><p>Mentions mises à jour le 27 septembre 2026.</p></section>
+  </div></section>`;
+  byId('cpmail').onclick=function(){copyText(MAIL,this);};
+}
+
+/* =================== DÉMARRAGE =================== */
+renderTabs();paintPill();
+if(PENDING_CODE)tab='enligne';
+go(tab);
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
