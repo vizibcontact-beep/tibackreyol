@@ -302,7 +302,6 @@ function friendOf(f){return f.user_a===UID?f.user_b:f.user_a;}
 function friendsList(){return FRIENDSHIPS.filter(f=>f.status==='accepted').map(friendOf);}
 function pendingIn(){return FRIENDSHIPS.filter(f=>f.status==='pending'&&f.to_id===UID);}
 function pendingOut(){return FRIENDSHIPS.filter(f=>f.status==='pending'&&f.from_id===UID);}
-function openInvites(){return INVITES.filter(m=>(m.players||[]).length<2&&!(m.players||[]).includes(UID)&&!m.invite_status);}
 function paintPill(){
   byId('mename').textContent=hasProfile()?myPseudo():(SESSION?'Mon profil':'Connexion');
   const k=avKey(myAvatar());byId('meav').style.background=AVATARS[k].bg;byId('meav').innerHTML=hasProfile()?`<img src="avatars/${k}.jpg" alt="">`:'';
@@ -331,7 +330,6 @@ async function loadMatches(){
     MYMATCHES=ms;
   }catch(e){}
 }
-async function loadInvites(){if(!UID){INVITES=[];return;}try{INVITES=await q(SB.from('matches').select('*').eq('invite',UID).is('invite_status',null).limit(20));}catch(e){}}
 async function loadTop(){try{TOP=(await q(SB.from('profiles').select('id,pseudo,avatar,xp').order('xp',{ascending:false}).limit(200))).map(withUid);TOP.forEach(p=>PCACHE[p.uid]=p);}catch(e){}}
 async function loadExtras(){try{const rows=await q(SB.from('extras').select('*').order('id'));EXTRA={};rows.forEach(r=>{(EXTRA[r.theme]=EXTRA[r.theme]||[]).push(r);});PREP={};}catch(e){}}
 async function loadMyReports(){if(!UID){MYREPORTS=[];return;}try{MYREPORTS=await q(SB.from('reports').select('theme,answer,status').eq('user_id',UID));}catch(e){}}
@@ -584,7 +582,7 @@ function renderFriendLists(){
   byId('sentbox').innerHTML=po.length?`<p class="foot" style="text-align:left">En attente : ${po.map(f=>esc((player(f.to_id)||{pseudo:'…'}).pseudo)).join(', ')}</p>`:'';
   $app.querySelectorAll('[data-acc]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await q(SB.from('friendships').update({status:'accepted'}).eq('id',b.dataset.acc));await loadFriends();renderTabs();renderFriendLists();checkBadges();}catch(e){b.disabled=false;}});
   $app.querySelectorAll('[data-ref]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await q(SB.from('friendships').delete().eq('id',b.dataset.ref));await loadFriends();renderTabs();renderFriendLists();}catch(e){b.disabled=false;}});
-  $app.querySelectorAll('[data-ch]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const c=await createMatch(b.dataset.mode,settings.dur,b.dataset.ch);openMatch(c);}catch(e){b.disabled=false;toast(dbMsg(e));}});
+  $app.querySelectorAll('[data-ch]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const c=await createMatch(b.dataset.mode,settings.dur,[b.dataset.ch],2);openMatch(c);}catch(e){b.disabled=false;toast(dbMsg(e));}});
 }
 
 /* =================== CLASSEMENT =================== */
@@ -622,18 +620,29 @@ function renderRank(){
 }
 
 /* =================== EN LIGNE =================== */
+const MAXP=5;
+function openInvites(){return INVITES.filter(m=>!m.started&&(m.players||[]).length<(m.max_players||2)&&!(m.players||[]).includes(UID)&&!(m.declined||[]).includes(UID));}
+async function loadInvites(){if(!UID){INVITES=[];return;}try{INVITES=await q(SB.from('matches').select('*').contains('invites',[UID]).eq('started',false).order('created_at',{ascending:false}).limit(20));}catch(e){}}
+
 function showOnline(){
   if(needAuth())return;
+  const fr=friendsList();
   $app.innerHTML=`
   <section class="panel" id="invbox"><h3>Invitations reçues</h3><div class="plist" id="invs"></div></section>
   <section class="panel">
     <h3>Créer une partie</h3>
     <div class="seg" role="group" aria-label="Mode"><button type="button" data-m="live" aria-pressed="true">En direct</button><button type="button" data-m="async" aria-pressed="false">En différé</button></div>
     <p class="muted" id="mdesc" style="font-size:14px"></p>
+    <h3>Nombre de joueurs</h3>
+    <div class="seg" role="group" aria-label="Nombre de joueurs">${[2,3,4,5].map(n=>`<button type="button" data-np="${n}" aria-pressed="${n===2}">${n}</button>`).join('')}</div>
+    <h3>Durée d'une manche</h3>
     <div class="seg" role="group" aria-label="Durée">${[45,60,90].map(d=>`<button type="button" data-od="${d}" aria-pressed="${settings.dur===d}">${d} s</button>`).join('')}</div>
     <h3>Territoires</h3>
     ${terrChips()}
-    <button class="btn wide" id="create" type="button">Créer et obtenir un code</button>
+    ${fr.length?`<h3>Inviter des amis <span class="muted" id="invcount" style="text-transform:none;letter-spacing:0"></span></h3>
+    <div class="terrs">${fr.map(u=>{const p=player(u)||{pseudo:'…'};return `<button type="button" class="terr" data-fi="${esc(u)}" aria-pressed="false">${esc(p.pseudo)}</button>`;}).join('')}</div>`:''}
+    <p class="foot" style="text-align:left">Tu pourras aussi partager un code ou un lien pour compléter les places libres.</p>
+    <button class="btn wide" id="create" type="button">Créer la partie</button>
     <p class="bad" id="cerr" aria-live="polite"></p>
   </section>
   <section class="panel">
@@ -642,55 +651,136 @@ function showOnline(){
     <p class="bad" id="jerr" aria-live="polite"></p>
   </section>
   <section class="panel"><h3>Mes parties</h3><div class="mlist" id="mlist"></div></section>`;
-  let mode='live',dur=settings.dur;
-  const desc={live:'Vous jouez les manches ensemble : la manche suivante s\'ouvre quand vous avez tous les deux fini la précédente.',async:'Chacun joue ses 5 manches quand il veut. Le résultat s\'affiche quand les deux ont terminé.'};
+  let mode='live',dur=settings.dur,np=2;const picked=new Set();
+  const desc={live:'Vous jouez les manches ensemble : la partie démarre quand le créateur la lance, puis chaque manche s\'ouvre quand tout le monde a fini la précédente.',async:'Chacun joue ses 5 manches quand il veut. Le classement final s\'affiche quand tout le monde a terminé.'};
   const md=byId('mdesc');md.textContent=desc[mode];
+  const paintInv=()=>{const c=byId('invcount');if(c)c.textContent=`· ${picked.size} / ${np-1}`;$app.querySelectorAll('[data-fi]').forEach(x=>x.setAttribute('aria-pressed',picked.has(x.dataset.fi)));};
   $app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;$app.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',x===b));md.textContent=desc[mode];});
+  $app.querySelectorAll('[data-np]').forEach(b=>b.onclick=()=>{np=+b.dataset.np;$app.querySelectorAll('[data-np]').forEach(x=>x.setAttribute('aria-pressed',x===b));while(picked.size>np-1)picked.delete([...picked].pop());paintInv();});
   $app.querySelectorAll('[data-od]').forEach(b=>b.onclick=()=>{dur=+b.dataset.od;$app.querySelectorAll('[data-od]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
-  bindTerr();
-  byId('create').onclick=async function(){this.disabled=true;try{const code=await createMatch(mode,dur);openMatch(code);}catch(e){byId('cerr').textContent=dbMsg(e);this.disabled=false;}};
+  $app.querySelectorAll('[data-fi]').forEach(b=>b.onclick=()=>{const u=b.dataset.fi;if(picked.has(u))picked.delete(u);else{if(picked.size>=np-1){toast(`Partie à ${np} joueurs : ${np-1} invité${np>2?'s':''} maximum. Augmente le nombre de joueurs.`);return;}picked.add(u);}paintInv();});
+  paintInv();bindTerr();
+  byId('create').onclick=async function(){this.disabled=true;try{const code=await createMatch(mode,dur,[...picked],np);openMatch(code);}catch(e){byId('cerr').textContent=dbMsg(e);this.disabled=false;}};
   byId('join').onclick=async function(){const code=byId('jc').value.trim().toUpperCase(),err=byId('jerr');
     if(code.length!==5){err.textContent='Le code fait 5 caractères.';return;}
     this.disabled=true;try{const r=await joinMatch(code);if(r)err.textContent=r;else openMatch(code);}catch(e){err.textContent=dbMsg(e);}this.disabled=false;};
   renderMatchList();
 }
-function genCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<5;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
-async function createMatch(mode,dur,invite){
+async function createMatch(mode,dur,invites,maxp){
+  invites=(invites||[]).filter(u=>u&&u!==UID);
+  maxp=Math.max(2,Math.min(MAXP,maxp||invites.length+1,MAXP));if(invites.length>maxp-1)invites=invites.slice(0,maxp-1);
   for(let k=0;k<5;k++){
     const code=genCode();
-    const {error}=await SB.from('matches').insert({code,host:UID,mode,dur,terr:settings.terr,themes:pickThemes(settings.terr),players:[UID],invite:invite||null,
-      pseudos:{[UID]:myPseudo()},avatars:{[UID]:myAvatar()}});
+    const {error}=await SB.from('matches').insert({code,host:UID,mode,dur,terr:settings.terr,themes:pickThemes(settings.terr),players:[UID],max_players:maxp,invites,
+      invite:invites.length===1?invites[0]:null,pseudos:{[UID]:myPseudo()},avatars:{[UID]:myAvatar()}});
     if(!error){await loadMatches();return code;}
     if(error.code!=='23505')throw error;
   }
   throw new Error('code');
 }
-async function joinMatch(code){
-  const msg=await q(SB.rpc('join_match',{p_code:code,p_pseudo:myPseudo(),p_avatar:myAvatar()}));
-  if(!msg){await loadMatches();await loadInvites();renderTabs();}
-  return msg||null;
+function rankList(list){
+  const s=list.slice().sort((a,b)=>b.score-a.score||b.count-a.count);
+  s.forEach((x,i)=>{x.rank=(i>0&&x.score===s[i-1].score&&x.count===s[i-1].count)?s[i-1].rank:i+1;});
+  return s;
+}
+function myResult(ranked){
+  const me=ranked.find(x=>x.id===UID);if(!me)return null;
+  const top=ranked.filter(x=>x.rank===1).length;
+  return me.rank===1?(top>1?'tie':'win'):'loss';
 }
 function matchStatus(m){
-  const opp=(m.players||[]).find(x=>x!==UID),a=progOf(m,UID),b=opp?progOf(m,opp):null;
-  if(a.r>=ROUNDS&&b&&b.r>=ROUNDS){const w=winnerOf([{id:UID,score:a.score,count:a.count||0},{id:opp,score:b.score,count:b.count||0}]);return {k:'done',txt:w==='tie'?'Match nul':w.id===UID?'Gagnée':'Perdue'};}
-  if(!opp&&m.mode==='live')return {k:'wait',txt:m.invite_status==='declined'?'Invitation refusée':m.invite?'Invitation envoyée':'En attente d\'un adversaire'};
-  if(a.r>=ROUNDS)return {k:'wait',txt:'Au tour de ton adversaire'};
-  if(m.mode==='live'&&b&&b.r<a.r)return {k:'wait',txt:'Ton adversaire joue'};
+  const ps=m.players||[],me=progOf(m,UID),maxp=m.max_players||2,others=ps.filter(x=>x!==UID);
+  const done=m.started&&ps.length>=2&&ps.every(u=>progOf(m,u).r>=ROUNDS);
+  if(done){const r=rankList(ps.map(u=>({id:u,score:progOf(m,u).score,count:progOf(m,u).count||0})));const mine=r.find(x=>x.id===UID);const top=r.filter(x=>x.rank===1).length;
+    return {k:'done',txt:mine.rank===1?(top>1?'Égalité en tête':'Gagnée'):`${mine.rank}${mine.rank===1?'re':'e'} place`};}
+  if(!m.started&&m.mode==='live')return {k:'wait',txt:`Salle d'attente · ${ps.length}/${maxp}`};
+  if(me.r>=ROUNDS)return {k:'wait',txt:m.started?'Les autres jouent encore':'Inscriptions ouvertes'};
+  if(m.mode==='live'&&others.some(u=>progOf(m,u).r<me.r))return {k:'wait',txt:'Les autres terminent la manche'};
   return {k:'turn',txt:'À toi de jouer'};
 }
 function renderMatchList(){
   const el=byId('mlist');if(!el)return;
   const inv=openInvites(),ib=byId('invbox');
-  if(ib){ib.hidden=!inv.length;byId('invs').innerHTML=inv.map(m=>{const h=m.host;return `<div class="prow f">${avatar((m.avatars||{})[h],40)}<div class="nm"><b>${esc((m.pseudos||{})[h]||'Un ami')}</b><small>te défie ${m.mode==='live'?'en direct':'en différé'} · ${m.dur} s</small></div><div class="acts"><button class="btn sm" data-ia="${esc(m.code)}" type="button">Jouer</button><button class="btn ghost sm" data-ir="${esc(m.code)}" type="button">Refuser</button></div></div>`;}).join('');
-    $app.querySelectorAll('[data-ia]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const r=await joinMatch(b.dataset.ia);if(!r)openMatch(b.dataset.ia);else{toast(r);b.disabled=false;}}catch(e){b.disabled=false;}});
+  if(ib){ib.hidden=!inv.length;byId('invs').innerHTML=inv.map(m=>{const h=m.host;return `<div class="prow f">${avatar((m.avatars||{})[h],40)}<div class="nm"><b>${esc((m.pseudos||{})[h]||'Un ami')}</b><small>t'invite · ${m.mode==='live'?'en direct':'en différé'} · ${(m.players||[]).length}/${m.max_players||2} joueurs · ${m.dur} s</small></div><div class="acts"><button class="btn sm" data-ia="${esc(m.code)}" type="button">Rejoindre</button><button class="btn ghost sm" data-ir="${esc(m.code)}" type="button">Refuser</button></div></div>`;}).join('');
+    $app.querySelectorAll('[data-ia]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const r=await joinMatch(b.dataset.ia);if(!r)openMatch(b.dataset.ia);else{toast(r);b.disabled=false;await loadInvites();renderMatchList();}}catch(e){b.disabled=false;}});
     $app.querySelectorAll('[data-ir]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await q(SB.rpc('decline_invite',{p_code:b.dataset.ir}));await loadInvites();renderTabs();renderMatchList();}catch(e){b.disabled=false;}});}
-  if(!MYMATCHES.length){el.innerHTML='<p class="empty">Aucune partie pour l\'instant. Crée-en une, défie un ami ou rejoins une partie avec son code.</p>';return;}
-  el.innerHTML=MYMATCHES.map(m=>{const opp=(m.players||[]).find(x=>x!==UID),st=matchStatus(m),a=progOf(m,UID),b=opp?progOf(m,opp):{score:0};
-    const oppName=opp?(m.pseudos||{})[opp]||'Adversaire':(m.invite&&m.invite_status!=='declined'?((player(m.invite)||{}).pseudo||'…'):'…');
-    return `<button class="mitem" type="button" data-code="${esc(m.code)}"><span class="t1">vs ${esc(oppName)}<span class="badge b-${st.k}">${st.txt}</span></span>
-    <span class="sc2">${a.score} – ${opp?b.score:'?'}</span>
-    <span class="t2">${m.mode==='live'?'En direct':'En différé'}${m.terr&&m.terr.length?' · '+esc(m.terr.map(x=>TERR_NAME[x]).join(', ')):''} · code ${esc(m.code)} · manche ${Math.min(a.r+1,ROUNDS)}/${ROUNDS}</span></button>`;}).join('');
+  if(!MYMATCHES.length){el.innerHTML='<p class="empty">Aucune partie pour l\'instant. Crée-en une, défie tes amis ou rejoins une partie avec son code.</p>';return;}
+  el.innerHTML=MYMATCHES.map(m=>{const others=(m.players||[]).filter(x=>x!==UID),st=matchStatus(m),a=progOf(m,UID);
+    const names=others.length?others.map(u=>(m.pseudos||{})[u]||'Joueur').join(', '):'personne pour l\'instant';
+    const best=others.length?Math.max(...others.map(u=>progOf(m,u).score)):null;
+    return `<button class="mitem" type="button" data-code="${esc(m.code)}"><span class="t1">avec ${esc(names)}<span class="badge b-${st.k}">${st.txt}</span></span>
+    <span class="sc2">${a.score}${best!==null?`<small class="muted" style="display:block;font-size:11px">meilleur adv. ${best}</small>`:''}</span>
+    <span class="t2">${m.mode==='live'?'En direct':'En différé'} · ${(m.players||[]).length}/${m.max_players||2} joueurs${m.terr&&m.terr.length?' · '+esc(m.terr.map(x=>TERR_NAME[x]).join(', ')):''} · code ${esc(m.code)} · manche ${Math.min(a.r+1,ROUNDS)}/${ROUNDS}</span></button>`;}).join('');
   el.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>openMatch(b.dataset.code));
+}
+function shareText(code){return `Viens jouer avec moi à Ti Bac Kréyol ! Code de la partie : ${code} — ${shareLink(code)}`;}
+function renderMatch(code,M,P){
+  if(!M){$app.innerHTML=`<section class="panel"><h2>Partie introuvable</h2><p class="muted">Le code ${esc(code)} ne correspond à aucune partie.</p><button class="btn ghost" id="back" type="button">Retour</button></section>`;byId('back').onclick=()=>go('enligne');return;}
+  const maxp=M.max_players||2,isHost=M.host===UID;
+  const players=M.players.map(u=>{const p=P[u]||{rounds:{}};return {id:u,name:(M.pseudos||{})[u]||'Joueur',av:(M.avatars||{})[u]||'zonbi',r:Object.keys(p.rounds||{}).length,score:sumPts(p),count:countFound(p),p};});
+  const me=players.find(x=>x.id===UID)||{r:0,score:0,count:0,p:{rounds:{}}},others=players.filter(x=>x.id!==UID);
+  const myR=me.r,mine=me.p;
+  const finished=M.started&&players.length>=2&&players.every(x=>x.r>=ROUNDS);
+  const ranked=rankList(players);
+  const hostName=(M.pseudos||{})[M.host]||'le créateur';
+  let action='';
+  if(finished){
+    const res=myResult(ranked);const winners=ranked.filter(x=>x.rank===1);
+    awardMatch(code,res);
+    if(!CELEBRATED[code]){CELEBRATED[code]=1;if(res!=='loss'){setTimeout(()=>{SFX.win();confetti();},200);}else SFX.lose();}
+    const myRank=ranked.find(x=>x.id===UID).rank;
+    action=`<section class="panel center pass"><h3>Partie terminée</h3><p class="big">${res==='win'?'Tu gagnes !':res==='tie'?'Égalité en tête !':esc(winners.map(w=>w.name).join(' et '))+(winners.length>1?' gagnent':' gagne')}</p>
+      <p class="muted">${res==='loss'?`Tu termines ${myRank}${myRank===1?'re':'e'} sur ${players.length}. `:''}+${res==='win'?XP_WIN:res==='tie'?XP_TIE:XP_PLAY} pts de bonus au classement</p><button class="btn" id="rematch" type="button">Revanche</button></section>`;
+  }else if(!M.started&&M.mode==='live'){
+    action=`<section class="panel center"><h3>Salle d'attente · ${players.length}/${maxp} joueurs</h3>
+      ${isHost?`<p class="muted">Lance la partie quand tout le monde est là${players.length<maxp?' : les places restantes seront fermées':''}.</p><button class="btn wide" id="startm" type="button" ${players.length<2?'disabled':''}>Lancer la partie${players.length<2?' (2 joueurs minimum)':` à ${players.length}`}</button>`
+      :`<p class="muted">En attente que ${esc(hostName)} lance la partie.</p>`}</section>`;
+  }else if(myR>=ROUNDS){
+    const left=others.filter(x=>x.r<ROUNDS);
+    action=`<section class="panel center"><h3>Tu as fini tes ${ROUNDS} manches</h3><p class="muted">${!M.started?`Les inscriptions sont encore ouvertes (${players.length}/${maxp}).`:`En attente de ${esc(left.map(x=>x.name).join(', '))}.`} Le classement final s'affichera ici automatiquement.</p></section>`;
+  }else{
+    const late=M.mode==='live'?others.filter(x=>x.r<myR):[];
+    action=`<section class="panel center">${late.length?`<h3>Manche ${myR+1}</h3><p class="muted">${esc(late.map(x=>x.name).join(', '))} ${late.length>1?'terminent':'termine'} la manche ${myR}. La suivante s'ouvre dès que tout le monde a fini.</p>`
+      :`<h3>Manche ${myR+1} sur ${ROUNDS}</h3><button class="btn wide" id="playnext" type="button">Jouer la manche ${myR+1}</button><p class="foot">Une manche commencée compte, même si tu quittes la page.</p>`}</section>`;
+  }
+  const closeAsync=(!M.started&&M.mode==='async'&&isHost)?`<section class="panel"><h3>Inscriptions ouvertes · ${players.length}/${maxp}</h3><p class="muted" style="font-size:14px">Le classement final est calculé quand les inscriptions sont fermées et que chacun a joué ses ${ROUNDS} manches.</p><button class="btn ghost" id="startm" type="button" ${players.length<2?'disabled':''}>Fermer les inscriptions${players.length<2?' (2 joueurs minimum)':''}</button></section>`:'';
+  const invitePanel=(!M.started&&players.length<maxp)?`<section class="panel"><h3>Invite des joueurs · ${maxp-players.length} place${maxp-players.length>1?'s':''} libre${maxp-players.length>1?'s':''}</h3><div class="codebox"><b>${esc(code)}</b><button class="btn sm" id="copycode" type="button">Copier le code</button></div>
+    <div class="row"><button class="btn ghost grow" id="sharelink" type="button">Partager le lien d'invitation</button><button class="btn ghost grow" id="copymsg" type="button">Copier le message</button></div>
+    <p class="muted" style="font-size:14px">Les joueurs ouvrent le lien, ou saisissent le code dans « En ligne ».${M.mode==='async'?' Tu peux commencer à jouer sans attendre.':''}</p></section>`:'';
+  const cols=[me,...others];
+  $app.innerHTML=`
+  <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="back" type="button">← Mes parties</button><span class="muted" style="font-size:14px">${M.mode==='live'?'En direct':'En différé'} · ${players.length}/${maxp} joueurs · ${M.dur} s</span></div>
+  ${invitePanel}
+  <div class="scoreline">${ranked.map(x=>`<div class="sc ${finished&&x.rank===1?'win':''} ${x.id===UID?'meb':''}"><div class="vs">${avatar(x.av,40)}<span class="n">${finished?`<b class="rkb">${x.rank}</b> `:''}${esc(x.name)}${x.id===UID?' (toi)':''}</span></div><span class="v">${x.score}</span><span class="d">${x.r}/${ROUNDS} manches</span></div>`).join('')}</div>
+  ${action}
+  ${closeAsync}
+  <section class="panel"><h3>Manches</h3>
+  <div class="scroll"><table class="tbl"><thead><tr><th>Thème</th>${cols.map(c=>`<th class="num">${c.id===UID?'Toi':esc(c.name.slice(0,7))}</th>`).join('')}<th></th></tr></thead><tbody>
+  ${M.themes.map((ti,r)=>{const iPlayed=r<myR;
+    return `<tr><td>${iPlayed?esc(THEMES[ti].t):`<span class="dash">Manche ${r+1} · thème caché</span>`}</td>
+    ${cols.map(c=>{const played=r<c.r;return `<td class="num">${c.id===UID?(played?((mine.rounds[r]||{}).pts||0):'–'):(played?(iPlayed?((c.p.rounds[r]||{}).pts||0):'✓'):'–')}</td>`;}).join('')}
+    <td>${iPlayed?`<button class="btn ghost sm" data-det="${r}" type="button">Réponses</button>`:''}</td></tr>`;}).join('')}
+  </tbody></table></div>
+  <p class="foot">Les réponses des autres joueurs s'affichent pour une manche une fois que tu l'as jouée.</p></section>
+  <div id="detail"></div>`;
+  byId('back').onclick=()=>go('enligne');
+  const c1=byId('copycode');if(c1)c1.onclick=()=>copyText(code,c1);
+  const c2=byId('sharelink');if(c2)c2.onclick=async()=>{
+    if(navigator.share){try{await navigator.share({title:'Ti Bac Kréyol',text:`Viens jouer avec moi à Ti Bac Kréyol ! Code : ${code}`,url:shareLink(code)});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+    copyText(shareLink(code),c2,'Lien copié !');};
+  const c3=byId('copymsg');if(c3)c3.onclick=()=>copyText(shareText(code),c3,'Message copié !');
+  const sm=byId('startm');if(sm)sm.onclick=async()=>{sm.disabled=true;try{const r=await q(SB.rpc('start_match',{p_code:code}));if(r){toast(r);sm.disabled=false;}else{await fetchCurrent(code);renderMatch(code,CUR_M,CUR_P);}}catch(e){sm.disabled=false;toast(dbMsg(e));}};
+  const pn=byId('playnext');if(pn)pn.onclick=()=>playOnline(code,M,mine,myR);
+  const rm=byId('rematch');if(rm)rm.onclick=async()=>{rm.disabled=true;try{if(M.terr&&M.terr.length)settings.terr=M.terr;const c=await createMatch(M.mode,M.dur,others.map(x=>x.id),maxp);openMatch(c);}catch(e){rm.disabled=false;}};
+  $app.querySelectorAll('[data-det]').forEach(b=>b.onclick=()=>{const r=+b.dataset.det,th=prep(M.themes[r]);
+    const dcols=[{name:'Toi',found:(mine.rounds[r]||{}).found||[]},...others.filter(o=>r<o.r).map(o=>({name:o.name,found:(o.p.rounds[r]||{}).found||[]}))];
+    const d=byId('detail');d.innerHTML=`<section class="panel"><h3>Manche ${r+1}</h3><h2>${esc(th.title)}</h2>${answersTable(th,dcols)}</section>`;d.scrollIntoView({behavior:'smooth'});});
+}
+function genCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<5;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
+async function joinMatch(code){
+  const msg=await q(SB.rpc('join_match',{p_code:code,p_pseudo:myPseudo(),p_avatar:myAvatar()}));
+  if(!msg){await loadMatches();await loadInvites();renderTabs();}
+  return msg||null;
 }
 let CUR_M=null,CUR_P={};
 async function fetchCurrent(code){
@@ -708,61 +798,6 @@ async function openMatch(code){
 function sumPts(p){return p?Object.values(p.rounds||{}).reduce((s,r)=>s+(r.pts||0),0):0;}
 function countFound(p){return p?Object.values(p.rounds||{}).reduce((s,r)=>s+((r.found||[]).length),0):0;}
 function shareLink(code){return `${location.origin}${location.pathname}#${code}`;}
-function shareText(code){return `Viens m'affronter sur Ti Bac Kréyol ! Code de la partie : ${code} — ${shareLink(code)}`;}
-function renderMatch(code,M,P){
-  if(!M){$app.innerHTML=`<section class="panel"><h2>Partie introuvable</h2><p class="muted">Le code ${esc(code)} ne correspond à aucune partie.</p><button class="btn ghost" id="back" type="button">Retour</button></section>`;byId('back').onclick=()=>go('enligne');return;}
-  const opp=M.players.find(x=>x!==UID),mine=P[UID]||{rounds:{}},theirs=opp?(P[opp]||{rounds:{}}):null;
-  const myR=Object.keys(mine.rounds||{}).length,opR=theirs?Object.keys(theirs.rounds||{}).length:0;
-  const myScore=sumPts(mine),opScore=theirs?sumPts(theirs):0;
-  const myName=(M.pseudos||{})[UID]||myPseudo(),opName=opp?((M.pseudos||{})[opp]||'Adversaire'):'…';
-  const myAv=(M.avatars||{})[UID]||myAvatar(),opAv=opp?(M.avatars||{})[opp]:'zonbi';
-  const finished=myR>=ROUNDS&&opR>=ROUNDS;
-  let action='';
-  if(finished){
-    const w=winnerOf([{id:UID,score:myScore,count:countFound(mine)},{id:opp,score:opScore,count:countFound(theirs)}]);
-    const res=w==='tie'?'tie':w.id===UID?'win':'loss';
-    awardMatch(code,res);
-    if(!CELEBRATED[code]){CELEBRATED[code]=1;if(res==='win'){setTimeout(()=>{SFX.win();confetti();},200);}else if(res==='loss')SFX.lose();}
-    action=`<section class="panel center pass"><h3>Partie terminée</h3><p class="big">${res==='tie'?'Match nul !':res==='win'?'Tu gagnes !':esc(opName)+' gagne'}</p><p class="muted">${esc(myName)} ${myScore} – ${opScore} ${esc(opName)} · +${res==='win'?XP_WIN:res==='tie'?XP_TIE:XP_PLAY} pts de bonus au classement</p><button class="btn" id="rematch" type="button">Revanche</button></section>`;
-  }else if(myR>=ROUNDS){
-    action=`<section class="panel center"><h3>Tu as fini tes ${ROUNDS} manches</h3><p class="muted">${opp?`En attente de ${esc(opName)} (${opR}/${ROUNDS} manches jouées).`:'En attente d\'un adversaire.'} Le résultat s'affichera ici automatiquement.</p></section>`;
-  }else{
-    const blocked=M.mode==='live'&&(!opp||opR<myR);
-    action=`<section class="panel center">${blocked?`<h3>Manche ${myR+1}</h3><p class="muted">${!opp?'En attente de ton adversaire. Envoie-lui le code ou le lien ci-dessus.':`${esc(opName)} termine la manche ${opR+1}. La tienne s'ouvre dès qu'il ou elle a fini.`}</p>`
-      :`<h3>Manche ${myR+1} sur ${ROUNDS}</h3><button class="btn wide" id="playnext" type="button">Jouer la manche ${myR+1}</button><p class="foot">Une manche commencée compte, même si tu quittes la page.</p>`}</section>`;
-  }
-  $app.innerHTML=`
-  <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="back" type="button">← Mes parties</button><span class="muted" style="font-size:14px">${M.mode==='live'?'En direct':'En différé'} · ${M.dur} s par manche</span></div>
-  ${opp?'':`<section class="panel"><h3>Invite ton adversaire</h3><div class="codebox"><b>${esc(code)}</b><button class="btn sm" id="copycode" type="button">Copier le code</button></div>
-    <div class="row"><button class="btn ghost grow" id="sharelink" type="button">Partager le lien d'invitation</button><button class="btn ghost grow" id="copymsg" type="button">Copier le message</button></div>
-    <p class="muted" style="font-size:14px">Ton adversaire ouvre le lien, ou saisit le code dans « En ligne ».${M.mode==='async'?' Tu peux commencer à jouer sans attendre.':''}</p></section>`}
-  <div class="scoreline">
-    <div class="sc ${finished&&myScore>opScore?'win':''}"><div class="vs">${avatar(myAv,44)}<span class="n">${esc(myName)} (toi)</span></div><span class="v">${myScore}</span><span class="d">${myR}/${ROUNDS} manches</span></div>
-    <div class="sc ${finished&&opScore>myScore?'win':''}"><div class="vs">${avatar(opAv,44)}<span class="n">${esc(opName)}</span></div><span class="v">${opp?opScore:'–'}</span><span class="d">${opp?`${opR}/${ROUNDS} manches`:'pas encore arrivé'}</span></div>
-  </div>
-  ${action}
-  <section class="panel"><h3>Manches</h3>
-  <div class="scroll"><table class="tbl"><thead><tr><th>Thème</th><th class="num">Toi</th><th class="num">${esc(opName.slice(0,9))}</th><th></th></tr></thead><tbody>
-  ${M.themes.map((ti,r)=>{const iPlayed=r<myR,oPlayed=r<opR;
-    return `<tr><td>${iPlayed?esc(THEMES[ti].t):`<span class="dash">Manche ${r+1} · thème caché</span>`}</td>
-    <td class="num">${iPlayed?((mine.rounds[r]||{}).pts||0):'–'}</td>
-    <td class="num">${oPlayed?(iPlayed?((theirs.rounds[r]||{}).pts||0):'✓'):'–'}</td>
-    <td>${iPlayed?`<button class="btn ghost sm" data-det="${r}" type="button">Réponses</button>`:''}</td></tr>`;}).join('')}
-  </tbody></table></div>
-  <p class="foot">Les réponses de ton adversaire s'affichent pour une manche une fois que tu l'as jouée.</p></section>
-  <div id="detail"></div>`;
-  byId('back').onclick=()=>go('enligne');
-  const c1=byId('copycode');if(c1)c1.onclick=()=>copyText(code,c1);
-  const c2=byId('sharelink');if(c2)c2.onclick=async()=>{
-    if(navigator.share){try{await navigator.share({title:'Ti Bac Kréyol',text:`Viens m'affronter sur Ti Bac Kréyol ! Code : ${code}`,url:shareLink(code)});return;}catch(e){if(e&&e.name==='AbortError')return;}}
-    copyText(shareLink(code),c2,'Lien copié !');};
-  const c3=byId('copymsg');if(c3)c3.onclick=()=>copyText(shareText(code),c3,'Message copié !');
-  const pn=byId('playnext');if(pn)pn.onclick=()=>playOnline(code,M,mine,myR);
-  const rm=byId('rematch');if(rm)rm.onclick=async()=>{rm.disabled=true;try{if(M.terr&&M.terr.length)settings.terr=M.terr;const c=await createMatch(M.mode,M.dur,opp);openMatch(c);}catch(e){rm.disabled=false;}};
-  $app.querySelectorAll('[data-det]').forEach(b=>b.onclick=()=>{const r=+b.dataset.det,th=prep(M.themes[r]);
-    const cols=[{name:'Toi',found:(mine.rounds[r]||{}).found||[]}];if(theirs&&r<opR)cols.push({name:opName,found:(theirs.rounds[r]||{}).found||[]});
-    const d=byId('detail');d.innerHTML=`<section class="panel"><h3>Manche ${r+1}</h3><h2>${esc(th.title)}</h2>${answersTable(th,cols)}</section>`;d.scrollIntoView({behavior:'smooth'});});
-}
 async function awardMatch(code,res){
   if(!MEP||AWARDING[code]||(MEP.counted||[]).includes(code))return;
   AWARDING[code]=1;
@@ -1006,8 +1041,8 @@ function showRules(){
     ${[['AN','Communs aux Antilles et à la Guyane'],...TERRS].map(([k,n])=>{const list=activeThemes(null).filter(i=>THEMES[i].terr===k);return list.length?`<h5 class="tgh">${esc(n)} · ${list.length}</h5><div class="themes">${list.map(i=>`<span>${esc(THEMES[i].t)}</span>`).join('')}</div>`:'';}).join('')}</section>
   <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Certaines graphies créoles courantes sont acceptées (par exemple Foyal, zandoli, konpè Lapen).</p></section>
   <section><span class="art">ARTICLE 5</span><h4>Jokers</h4><ul><li>+15 secondes : prolonge une manche de 15 secondes. Un seul par partie.</li><li>Indice : affiche les deux premières lettres et la longueur d'une réponse non trouvée. Deux par partie.</li></ul></section>
-  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, en direct : chaque joueur sur son téléphone. La manche suivante s'ouvre quand l'adversaire a terminé la précédente.</li><li>En ligne, en différé : chaque joueur joue ses ${ROUNDS} manches quand il le souhaite. Le résultat s'affiche quand les deux ont terminé.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
-  <section><span class="art">ARTICLE 7</span><h4>Fin de partie et égalité</h4><p>Le joueur qui totalise le plus de points à l'issue des ${ROUNDS} manches gagne. En cas d'égalité de points, la victoire revient au joueur qui a trouvé le plus de réponses. Si l'égalité persiste, la partie est déclarée nulle.</p></section>
+  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
+  <section><span class="art">ARTICLE 7</span><h4>Fin de partie et égalité</h4><p>Les joueurs sont classés selon leur total de points à l'issue des ${ROUNDS} manches. En cas d'égalité de points, le joueur qui a trouvé le plus de réponses passe devant. Si l'égalité persiste, les joueurs partagent la même place. Bonus de classement : ${XP_WIN} points pour le vainqueur, ${XP_TIE} points en cas de première place partagée, ${XP_PLAY} points pour les autres participants.</p></section>
   <section><span class="art">ARTICLE 8</span><h4>Profil, pseudo et amis</h4><ul><li>Pour jouer en ligne, chaque joueur crée un compte gratuit (adresse e-mail et mot de passe), puis un profil avec un pseudo unique et un personnage des contes créoles.</li><li>Le pseudo doit rester correct : pas d'insulte, pas d'usurpation d'identité. L'éditeur peut modifier ou supprimer un pseudo inapproprié.</li><li>On ajoute un ami en saisissant son pseudo. L'amitié est confirmée quand l'autre joueur accepte la demande.</li></ul></section>
   <section><span class="art">ARTICLE 9</span><h4>Classement et niveaux</h4><ul><li>Seules les parties en ligne comptent pour le classement.</li><li>Points de classement : tous les points marqués en ligne, plus ${XP_WIN} points par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</li><li>Deux classements : entre amis, et mondial (tous les joueurs).</li><li>Niveaux : ${LEVELS.map(([m,n])=>`${n} (${m})`).join(', ')}.</li></ul></section>
   <section><span class="art">ARTICLE 10</span><h4>Défi du jour</h4><ul><li>Chaque jour, un thème est tiré au sort et proposé à tous les joueurs. Il change à minuit, heure des Antilles.</li><li>Une seule tentative par jour, de 60 secondes, avec un indice. Une tentative commencée compte, même si elle n'est pas terminée.</li><li>Un classement du jour réunit tous les participants. Les points du défi s'ajoutent aux points de classement.</li></ul></section>

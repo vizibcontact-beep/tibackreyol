@@ -32,6 +32,7 @@ Durée : environ 45 minutes. Coût : 0 €.
 3. Menu de gauche → **SQL Editor** → **New query**.
 4. Ouvre le fichier `supabase/schema.sql`, copie **tout** son contenu, colle-le, puis clique **Run**.
    Tu dois voir « Success. No rows returned ».
+5. Recommence avec le fichier `supabase/migration-2-multijoueur.sql` (parties en ligne de 2 à 5 joueurs) : **New query**, coller, **Run**.
 
 ## Étape 2 — Relier le jeu à la base
 

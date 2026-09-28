@@ -188,3 +188,5 @@ input[type=password]:focus{border-color:var(--gold)}
 .sep{height:1px;background:var(--line);margin-block:4px}
 .tgh{margin:8px 0 0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
 .prose .rules{margin-block:4px}
+.sc.meb{box-shadow:inset 0 0 0 1.5px var(--line)}
+.rkb{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:99px;background:var(--gold);color:#2A1C00;font-size:12px;font-family:var(--mono)}
