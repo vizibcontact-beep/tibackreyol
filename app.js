@@ -2,9 +2,9 @@
 
 /* ---------- Normalisation & correspondance ---------- */
 const STOP=new Set(['le','la','les','l','de','du','des','d','a','au','aux','en','et','the']);
-function norm(s,extra){
+function norm(s,extra,keep){
   s=String(s).toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-  return s.split(' ').filter(w=>w&&!STOP.has(w)&&!(extra&&extra.has(w)))
+  return s.split(' ').filter(w=>w&&(!STOP.has(w)||(keep&&keep.has(w)))&&!(extra&&extra.has(w)))
     .map(w=>w==='st'?'saint':w==='ste'?'sainte':w)
     .map(w=>w.length>4&&w.endsWith('s')?w.slice(0,-1):w).join('');
 }
@@ -17,10 +17,10 @@ function lev(a,b){
 let PREP={},EXTRA={};
 function prep(i){
   if(PREP[i])return PREP[i];
-  const th=THEMES[i],extra=th.stop?new Set(th.stop):null;
+  const th=THEMES[i],extra=th.stop?new Set(th.stop):null,keep=th.keep?new Set(th.keep):null;
   const added=(EXTRA[i]||[]).map(x=>'*'.repeat(Math.max(0,Math.min(3,x.pts||1)-1))+x.name+((x.alias||[]).length?'|'+x.alias.join(','):''));
-  return PREP[i]={idx:i,title:th.t,extra,answers:[...th.a,...added].map(s=>{let pts=1;while(s[0]==='*'){pts++;s=s.slice(1);}
-    const [name,al]=s.split('|');const keys=[name,...(al?al.split(','):[])].map(k=>norm(k,extra)).filter(Boolean);
+  return PREP[i]={idx:i,title:th.t,extra,keep,answers:[...th.a,...added].map(s=>{let pts=1;while(s[0]==='*'){pts++;s=s.slice(1);}
+    const [name,al]=s.split('|');const keys=[name,...(al?al.split(','):[])].map(k=>norm(k,extra,keep)).filter(Boolean);
     return {name,pts,keys:[...new Set(keys)],pkeys:[...new Set(keys.map(phon))]};})};
 }
 /* Clé « sonore » : deux orthographes qui se prononcent pareil (français ou créole) donnent la même clé.
@@ -40,7 +40,7 @@ function phon(k){
   return s||k;
 }
 function findAnswer(input,th){
-  const n=norm(input,th.extra);if(!n)return null;
+  const n=norm(input,th.extra,th.keep);if(!n)return null;
   for(let i=0;i<th.answers.length;i++)if(th.answers[i].keys.includes(n))return i;
   // 1) même prononciation (orthographe française ou créole différente)
   const pn=phon(n);
@@ -75,15 +75,18 @@ function avatar(k,size){k=avKey(k);const a=AVATARS[k];return `<span class="av" s
 const LEVELS=[[0,'Ti Kalbas'],[100,'Zandoli'],[300,'Mabouya'],[600,'Manikou'],[1000,'Konpè Lapen'],[1600,'Ti-Jean'],[2500,'Majò'],[4000,'Mèt Kont'],[6000,'Gran Moun'],[9000,'Gran Mèt Kréyol']];
 function levelOf(xp){xp=xp||0;let i=0;while(i<LEVELS.length-1&&xp>=LEVELS[i+1][0])i++;
   const next=LEVELS[i+1];return {i,name:LEVELS[i][1],min:LEVELS[i][0],next:next?next[0]:null,nextName:next?next[1]:null,pct:next?Math.min(100,Math.round((xp-LEVELS[i][0])/(next[0]-LEVELS[i][0])*100)):100};}
-const XP_WIN=20,XP_TIE=10,XP_PLAY=5;
+const XP_WIN=20,XP_TIE=10,XP_PLAY=5,COMBO_EVERY=5,COMBO_BONUS=2;
 
 /* ---------- Utilitaires ---------- */
 const $app=document.getElementById('app');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ptsLabel=p=>`<span class="pts p${p}">+${p}</span>`;
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
-function activeThemes(terrs){return THEMES.map((t,i)=>i).filter(i=>!THEMES[i].off&&(!terrs||THEMES[i].terr==='AN'||terrs.includes(THEMES[i].terr)));}
-function pickThemes(terrs){
+function activeThemes(terrs){return THEMES.map((t,i)=>i).filter(i=>!THEMES[i].off&&!THEMES[i].kid&&(!terrs||THEMES[i].terr==='AN'||terrs.includes(THEMES[i].terr)));}
+function kidThemes(){return THEMES.map((t,i)=>i).filter(i=>!THEMES[i].off&&(THEMES[i].kid||KID_EXTRA.includes(THEMES[i].t)));}
+const KID_EXTRA=["Fruits qu'on trouve aux Antilles","Mots créoles du quotidien (en créole)"];
+function pickThemes(terrs,kid){
+  if(kid)return shuffle(kidThemes()).slice(0,ROUNDS);
   terrs=(terrs&&terrs.length)?terrs:(settings.terr||['MQ']);
   const act=activeThemes(terrs),loc=shuffle(act.filter(i=>THEMES[i].terr!=='AN')),com=shuffle(act.filter(i=>THEMES[i].terr==='AN'));
   const pick=loc.slice(0,3);
@@ -134,7 +137,7 @@ byId('mepill').onclick=()=>go('compte');
 function playRound({who,label,th,dur,jokers,score,onFinish,last}){
   cleanup();PLAYING=true;
   const found=[],rejects=[],rejKeys=new Set();let end=Date.now()+dur*1000,total=dur,hints=[],pts=0,done=false;
-  let combo=0,maxCombo=0,lastSec=null,recorded=false;const prevBest=bestFor(th.idx);
+  let combo=0,maxCombo=0,bonus=0,lastSec=null,recorded=false;const prevBest=bestFor(th.idx);
   $app.innerHTML=`
   <div class="hud">
     <div class="who">${esc(who)}<small>${esc(label)}</small></div>
@@ -165,8 +168,9 @@ function playRound({who,label,th,dur,jokers,score,onFinish,last}){
     if(i===null){if(combo>=3)SFX.breakStreak();else SFX.bad();combo=0;showCombo();const rk=norm(v,th.extra);if(rk&&!rejKeys.has(rk)){rejKeys.add(rk);rejects.push(v.slice(0,40));}say(`« ${v} » : pas dans la liste`,'bad');$in.classList.remove('shake');void $in.offsetWidth;$in.classList.add('shake');}
     else if(found.includes(i)){SFX.dup();say(`${th.answers[i].name} : déjà trouvé`,'dup');}
     else{found.push(i);const a=th.answers[i];pts+=a.pts;combo++;maxCombo=Math.max(maxCombo,combo);
+      const cb=combo%COMBO_EVERY===0?COMBO_BONUS:0;pts+=cb;bonus+=cb;
       SFX.good(a.pts,combo);showCombo();
-      say(`${a.name} ! +${a.pts}${a.pts===3?' · très rare':a.pts===2?' · rare':''}`,'ok');render();
+      say(`${a.name} ! +${a.pts}${a.pts===3?' · très rare':a.pts===2?' · rare':''}${cb?` · bonus combo +${cb}`:''}`,'ok');render();
       if(!recorded&&prevBest>=3&&found.length===prevBest+1){recorded=true;setTimeout(()=>{if(!done){SFX.record();flashCombo('🏆 Nouveau record !','rec');}},450);}
       if(found.length===th.answers.length)finish();}
     $in.value='';$in.focus();
@@ -177,11 +181,11 @@ function playRound({who,label,th,dur,jokers,score,onFinish,last}){
     jokers.hint--;hints.push(left[Math.floor(Math.random()*left.length)]);this.querySelector('small').textContent=`(${jokers.hint})`;if(!jokers.hint)this.disabled=true;render();$in.focus();};
   byId('jstop').onclick=()=>finish();
   function showCombo(){const el=byId('combo');if(!el)return;
-    if(combo>=5){el.textContent=`🔥 COMBO x${combo} !`;el.className='combo on'+(combo>=8?' hot':'');void el.offsetWidth;el.classList.add('bump');}
+    if(combo>=5){el.textContent=`🔥 COMBO x${combo} !${combo%COMBO_EVERY===0?` +${COMBO_BONUS}`:''}`;el.className='combo on'+(combo>=8?' hot':'');void el.offsetWidth;el.classList.add('bump');}
     else if(!el.classList.contains('rec')){el.textContent='';el.className='combo';}}
   function flashCombo(txt,cls){const el=byId('combo');if(!el)return;el.textContent=txt;el.className='combo on '+cls;
     setTimeout(()=>{if(el.classList.contains(cls)){el.className='combo';showCombo();}},2200);}
-  function finish(){if(done)return;done=true;PLAYING=false;clearInterval(tick);tick=null;SFX.end();saveBest(th.idx,found.length);onFinish(found.slice(),pts,rejects.slice());}
+  function finish(){if(done)return;done=true;PLAYING=false;clearInterval(tick);tick=null;SFX.end();saveBest(th.idx,found.length);onFinish(found.slice(),pts,rejects.slice(),{maxCombo,bonus});}
   if(last)SFX.suspense();
   const $tt=byId('tt'),$arc=byId('arc'),$timer=byId('timer');
   tick=setInterval(()=>{
@@ -218,9 +222,11 @@ function showSetup(){
       <label class="fld grow">Joueur 1<input type="text" id="n0" maxlength="16" value="${esc(settings.names[0])}"></label>
       ${settings.count===2?`<label class="fld grow">Joueur 2<input type="text" id="n1" maxlength="16" value="${esc(settings.names[1])}"></label>`:''}
     </div>
-    <h3>Territoires</h3>
+    <h3>Public</h3>
+    <div class="seg" role="group" aria-label="Public"><button type="button" id="kid0" aria-pressed="${!settings.kid}">Tout public</button><button type="button" id="kid1" aria-pressed="${!!settings.kid}">Mode Ti moun</button></div>
+    ${settings.kid?`<p class="muted" style="font-size:13px">Pour les enfants : ${kidThemes().length} thèmes simples (couleurs, chiffres et corps en créole, animaux, plage, contes, carnaval…), 3 indices par partie.</p>`:`<h3>Territoires</h3>
     ${terrChips()}
-    <p class="muted" style="font-size:13px" id="tcount"></p>
+    <p class="muted" style="font-size:13px" id="tcount"></p>`}
     <h3>Durée d'une manche</h3>
     <div class="seg" role="group" aria-label="Durée">${[45,60,90].map(d=>`<button type="button" data-d="${d}" aria-pressed="${settings.dur===d}">${d} s</button>`).join('')}</div>
     <div class="row"><button class="btn ghost sm" id="snd" type="button">${settings.sound?'Sons : activés':'Sons : coupés'}</button></div>
@@ -237,10 +243,12 @@ function showSetup(){
     <button class="btn ghost" id="toDaily" type="button">Relever le défi du jour</button>
   </section>
   ${installPanel()}`;
-  const paintThemes=()=>{const act=activeThemes(settings.terr);byId('tcount').textContent=`${act.length} thèmes : ceux des territoires choisis, plus les thèmes communs aux Antilles et à la Guyane.`;};
+  const paintThemes=()=>{const act=activeThemes(settings.terr);if(!byId('tcount'))return;byId('tcount').textContent=`${act.length} thèmes : ceux des territoires choisis, plus les thèmes communs aux Antilles et à la Guyane.`;};
   paintThemes();bindTerr(paintThemes);
   byId('snd').onclick=function(){settings.sound=!settings.sound;saveSettings();this.textContent=settings.sound?'Sons : activés':'Sons : coupés';if(settings.sound)SFX.good(1,3);};
   const readNames=()=>{settings.names[0]=(byId('n0').value.trim()||'Joueur 1');const n1=byId('n1');if(n1)settings.names[1]=n1.value.trim()||'Joueur 2';};
+  byId('kid0').onclick=()=>{readNames();settings.kid=false;saveSettings();showSetup();};
+  byId('kid1').onclick=()=>{readNames();settings.kid=true;saveSettings();showSetup();};
   byId('c1').onclick=()=>{readNames();settings.count=1;saveSettings();showSetup();};
   byId('c2').onclick=()=>{readNames();settings.count=2;saveSettings();showSetup();};
   $app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{readNames();settings.dur=+b.dataset.d;saveSettings();showSetup();});
@@ -249,7 +257,8 @@ function showSetup(){
   byId('toFriends').onclick=()=>go('amis');
 }
 function newLocalGame(){
-  G={players:settings.names.slice(0,settings.count).map(name=>({name,score:0,count:0,jokers:{time:1,hint:2}})),themes:pickThemes(settings.terr),round:0,turn:0,dur:settings.dur};
+  const kid=!!settings.kid;
+  G={kid,players:settings.names.slice(0,settings.count).map(name=>({name,score:0,count:0,jokers:{time:1,hint:kid?3:2}})),themes:pickThemes(settings.terr,kid),round:0,turn:0,dur:settings.dur};
   G.found=G.themes.map(()=>G.players.map(()=>[]));G.rej=G.themes.map(()=>G.players.map(()=>[]));G.roundPts=G.themes.map(()=>G.players.map(()=>0));
   localIntro();
 }
@@ -264,7 +273,7 @@ function localIntro(){
   </section>
   <div class="scoreline">${G.players.map(q=>`<div class="sc"><span class="n">${esc(q.name)}</span><span class="v">${q.score}</span><span class="d">points</span></div>`).join('')}</div>`;
   byId('ready').onclick=()=>playRound({who:p.name,label:`Manche ${G.round+1}/${ROUNDS}`,th,dur:G.dur,last:G.round===ROUNDS-1,jokers:p.jokers,score:p.score,
-    onFinish:(found,pts,rej)=>{G.found[G.round][G.turn]=found;G.rej[G.round][G.turn]=rej;G.roundPts[G.round][G.turn]=pts;p.score+=pts;p.count+=found.length;
+    onFinish:(found,pts,rej)=>{recordStats(G.themes[G.round],found);G.found[G.round][G.turn]=found;G.rej[G.round][G.turn]=rej;G.roundPts[G.round][G.turn]=pts;p.score+=pts;p.count+=found.length;
       if(G.turn<G.players.length-1){G.turn++;localIntro();}else localRoundResult();}});
 }
 function localRoundResult(){
@@ -317,10 +326,10 @@ const CFG=window.TIBAC_CONFIG||{};
 const CONFIGURED=!!(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY&&!/VOTRE|XXXX/.test(CFG.SUPABASE_URL+CFG.SUPABASE_ANON_KEY));
 const SB=(CONFIGURED&&window.supabase)?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY):null;
 let SESSION=null,UID=null,READY=false,RECOVERY=false;
-let MEP=null,MEPLOADED=false,FRIENDSHIPS=[],MYMATCHES=[],INVITES=[],TOP=[],PCACHE={},PFETCH={};
+let MEP=null,MEPLOADED=false,FRIENDSHIPS=[],MYMATCHES=[],INVITES=[],TOP=[],TOPW=[],PCACHE={},PFETCH={};
 let MYREPORTS=[],ALLREPORTS=[],MYDAILY=null,MYDAILY_LOADED=false,EARNED=null;
 let CURRENT=null,PENDING_CODE=null,AWARDING={},CELEBRATED={};
-{const h=(location.hash||'').replace('#','').toUpperCase();if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;
+{const h=(location.hash||'').replace('#','').toUpperCase();if(h==='DEFI'||h==='AMIS'){tab=h.toLowerCase();history.replaceState(null,'',location.pathname);}else if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;
  else{try{const k=localStorage.getItem('tibac_pending');if(k&&/^[A-Z0-9]{5}$/.test(k))PENDING_CODE=k;}catch(e){}}}
 const URLAUTH=location.hash+location.search;
 const FROM_EMAIL=/access_token=|type=signup|type=email|type=magiclink/.test(URLAUTH);
@@ -359,6 +368,9 @@ function dbMsg(e){
 async function q(p){const {data,error}=await p;if(error)throw error;return data;}
 
 /* ---------- Chargements ---------- */
+/* Dernière activité (sert au nettoyage des comptes inactifs depuis 2 ans) */
+function touchSeen(){if(!MEP||!SB)return;const last=Date.parse(MEP.last_seen||0)||0;if(Date.now()-last<12*3600e3)return;
+  const now=new Date().toISOString();SB.from('profiles').update({last_seen:now}).eq('id',UID).then(()=>{MEP.last_seen=now;},()=>{});}
 async function loadProfile(){if(!UID){MEP=null;MEPLOADED=true;return;}
   try{MEP=withUid(await q(SB.from('profiles').select('*').eq('id',UID).maybeSingle()));}catch(e){}
   MEPLOADED=true;paintPill();checkBadges();}
@@ -373,7 +385,8 @@ async function loadMatches(){
     MYMATCHES=ms.filter(m=>!(m.hidden||[]).includes(UID));
   }catch(e){}
 }
-async function loadTop(){try{TOP=(await q(SB.from('profiles').select('id,pseudo,avatar,xp').order('xp',{ascending:false}).limit(200))).map(withUid);TOP.forEach(p=>PCACHE[p.uid]=p);}catch(e){}}
+async function loadTop(){try{TOP=(await q(SB.from('profiles').select('id,pseudo,avatar,xp,week_xp,week_key').order('xp',{ascending:false}).limit(200))).map(withUid);TOP.forEach(p=>PCACHE[p.uid]=p);}catch(e){}
+  try{TOPW=(await q(SB.from('profiles').select('id,pseudo,avatar,xp,week_xp,week_key').eq('week_key',weekKey()).gt('week_xp',0).order('week_xp',{ascending:false}).limit(200))).map(withUid);TOPW.forEach(p=>PCACHE[p.uid]=p);}catch(e){}}
 async function loadExtras(){try{const rows=await q(SB.from('extras').select('*').order('id'));EXTRA={};rows.forEach(r=>{(EXTRA[r.theme]=EXTRA[r.theme]||[]).push(r);});PREP={};}catch(e){}}
 async function loadMyReports(){if(!UID){MYREPORTS=[];return;}try{MYREPORTS=await q(SB.from('reports').select('theme,answer,status').eq('user_id',UID));}catch(e){}}
 async function loadAllReports(){if(!IS_OWNER)return;try{ALLREPORTS=await q(SB.from('reports').select('id,user_id,theme,answer,status').eq('status','new').limit(1000));}catch(e){}}
@@ -395,7 +408,8 @@ function subscribeRealtime(){
    .subscribe();
 }
 async function loadAll(){
-  await Promise.all([loadProfile(),loadFriends(),loadMatches(),loadInvites(),loadTop(),loadExtras(),loadMyReports(),loadMyDaily()]);
+  await Promise.all([loadProfile(),loadFriends(),loadMatches(),loadInvites(),loadTop(),loadExtras(),loadMyReports(),loadMyDaily(),loadMySub()]);
+  touchSeen();
   IS_OWNER=false;if(UID){try{IS_OWNER=!!(await q(SB.rpc('is_admin')));}catch(e){}}
   await loadAllReports();
 }
@@ -470,6 +484,7 @@ function showAccount(){
   </section>
   ${hasProfile()?`<section class="panel"><h3>Mes statistiques en ligne</h3><div class="stats" id="stats"></div></section>
   <section class="panel"><h3>Mes badges · ${earnedBadges().length} / ${BADGES.length}</h3>${badgeGrid()}</section>`:''}
+  ${pushPanel()}
   <section class="panel"><h3>Mon compte</h3>
     <p class="muted" style="font-size:14px">Connecté·e avec <b id="myemail"></b></p>
     <div class="row"><button class="btn ghost" id="logout" type="button">Se déconnecter</button><button class="btn ghost" id="delacc" type="button">Supprimer mon compte</button></div>
@@ -485,10 +500,11 @@ function showAccount(){
     if(r){msg.className='bad';msg.textContent=r;this.disabled=false;return;}
     if(PENDING_CODE)handlePending();else{showAccount();const m2=byId('saved');if(m2){m2.className='ok';m2.textContent='Profil enregistré';}}
   };
-  byId('logout').onclick=async()=>{await SB.auth.signOut();go('jouer');};
+  bindPush();
+  byId('logout').onclick=async()=>{await disablePush();await SB.auth.signOut();go('jouer');};
   byId('delacc').onclick=()=>{byId('delbox').innerHTML=`<p class="notice">Ton profil, tes amis, tes parties et tes scores seront définitivement supprimés.</p><div class="row"><button class="btn red" id="delyes" type="button">Oui, supprimer définitivement</button><button class="btn ghost" id="delno" type="button">Annuler</button></div>`;
     byId('delno').onclick=()=>{byId('delbox').innerHTML='';};
-    byId('delyes').onclick=async function(){this.disabled=true;try{await q(SB.rpc('delete_my_account'));await SB.auth.signOut();toast('Ton compte a été supprimé.');go('jouer');}catch(e){this.disabled=false;byId('delbox').insertAdjacentHTML('beforeend',`<p class="bad">${esc(dbMsg(e))}</p>`);}};};
+    byId('delyes').onclick=async function(){this.disabled=true;try{await disablePush();await q(SB.rpc('delete_my_account'));await SB.auth.signOut();toast('Ton compte a été supprimé.');go('jouer');}catch(e){this.disabled=false;byId('delbox').insertAdjacentHTML('beforeend',`<p class="bad">${esc(dbMsg(e))}</p>`);}};};
   renderStats();
 }
 function showLogin(){
@@ -584,24 +600,51 @@ function renderStats(){
   const el=byId('stats');if(!el||!MEP)return;
   el.innerHTML=`<div class="stat"><b>${MEP.games||0}</b><span>parties terminées</span></div><div class="stat"><b>${MEP.wins||0}</b><span>victoires</span></div><div class="stat"><b>${friendsList().length}</b><span>amis</span></div>`;
 }
+/* Semaine de classement : du lundi au dimanche, heure des Antilles */
+function weekKey(){const d=new Date(Date.now()-4*3600e3);d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);}
+function weekPts(p){return p&&p.week_key===weekKey()?(p.week_xp||0):0;}
+function weekUpd(add){return {week_key:weekKey(),week_xp:weekPts(MEP)+add};}
+function recordStats(t,found){
+  if(!SB||!UID)return;const th=prep(t);
+  SB.rpc('record_answers',{p_theme:t,p_names:found.map(i=>th.answers[i]&&th.answers[i].name).filter(Boolean)}).then(()=>{},()=>{});
+}
 async function recordRound(t,found,pts,more){
+  recordStats(t,found);
   if(!MEP||!SB)return;
   const th=prep(t),perfect=found.length===th.answers.length?1:0,r3=found.filter(i=>th.answers[i]&&th.answers[i].pts===3).length;
   const best={...(MEP.best||{})};best[t]=Math.max(best[t]||0,found.length);
-  const upd={xp:(MEP.xp||0)+pts,perfect:(MEP.perfect||0)+perfect,rare3:(MEP.rare3||0)+r3,best,updated_at:new Date().toISOString(),...(more||{})};
+  const now=new Date().toISOString();
+  const upd={xp:(MEP.xp||0)+pts,...weekUpd(pts),perfect:(MEP.perfect||0)+perfect,rare3:(MEP.rare3||0)+r3,best,updated_at:now,last_seen:now,...(more||{})};
   await q(SB.from('profiles').update(upd).eq('id',UID));
   MEP={...MEP,...upd};checkBadges();
 }
-function afterRound({title,t,found,pts,rej,btn,next}){
+function afterRound({title,t,found,pts,rej,btn,next,meta,share}){
   cleanup();SUMMARY=true;window.scrollTo(0,0);
-  const th=prep(t);
+  const th=prep(t),bn=(meta&&meta.bonus)||0,mc=(meta&&meta.maxCombo)||0;
   $app.innerHTML=`
-  <section class="panel center pass"><h3>${esc(title)}</h3><p class="big">+${pts}</p><p class="muted">${esc(th.title)} · ${found.length} / ${th.answers.length} réponses</p></section>
+  <section class="panel center pass"><h3>${esc(title)}</h3><p class="big">+${pts}</p><p class="muted">${esc(th.title)} · ${found.length} / ${th.answers.length} réponses${bn?` · dont bonus combo +${bn}`:''}${mc>=3?` · meilleure série x${mc}`:''}</p>
+    ${share?`<button class="btn" id="shr" type="button">Partager mon score</button>`:''}</section>
   ${anecBlock(t)}
   ${reportBlock(t,rej)}
   <section class="panel"><h3>Toutes les réponses</h3>${answersTable(th,[{name:'Toi',found}])}</section>
   <button class="btn wide" id="nx" type="button">${esc(btn)}</button>`;
   bindReports();byId('nx').onclick=next;
+  if(share)byId('shr').onclick=function(){shareScore(share,this);};
+}
+/* Partage façon Wordle : un carré par réponse trouvée, couleur selon les points */
+function shareGrid(th,found){
+  const sq={1:'🟩',2:'🟨',3:'🟪'},cells=found.map(i=>sq[(th.answers[i]||{}).pts]||'🟩');
+  const rows=[];for(let k=0;k<Math.min(cells.length,30);k+=10)rows.push(cells.slice(k,k+10).join(''));
+  if(cells.length>30)rows[rows.length-1]+=` +${cells.length-30}`;
+  return rows.join('\n')||'⬜';
+}
+function dailyShareText(d,th,found,pts,meta){
+  const dd=d.slice(8,10)+'/'+d.slice(5,7);
+  return `Ti Bac Kréyol 🌴 Défi du ${dd}\nThème : ${th.title}\n${found.length} réponse${found.length>1?'s':''} · ${pts} pts\n${shareGrid(th,found)}${meta&&meta.maxCombo>=3?`\n🔥 Combo x${meta.maxCombo}`:''}\n${location.origin}${location.pathname}#defi`;
+}
+async function shareScore(txt,btn){
+  if(navigator.share){try{await navigator.share({text:txt});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+  copyText(txt,btn,'Copié ! Colle-le sur WhatsApp');
 }
 
 /* =================== AMIS =================== */
@@ -638,14 +681,15 @@ async function addFriend(p){
   }
   const [a,b]=[UID,other.id].sort();
   await q(SB.from('friendships').insert({id,user_a:a,user_b:b,from_id:UID,to_id:other.id}));
+  notify({kind:'friend',to:other.id});
   await loadFriends();renderFriendLists();
   return {ok:1,msg:'Demande d\'ami envoyée.'};
 }
-function prow(uid,{rank,acts,me}={}){
+function prow(uid,{rank,acts,me,val}={}){
   const p=player(uid)||{pseudo:'…',avatar:'zonbi',xp:0};const lv=levelOf(p.xp);
   return `<div class="prow ${acts&&rank===undefined?'f':''} ${me?'me':''}">${rank!==undefined?`<span class="rk">${rank}</span>`:''}${avatar(p.avatar,40)}
     <div class="nm"><b>${esc(p.pseudo)}${me?' (toi)':''}</b><small>${esc(lv.name)} · niv. ${lv.i+1}</small></div>
-    ${acts?`<div class="acts">${acts}</div>`:`<span class="xp">${p.xp||0}</span>`}</div>`;
+    ${acts?`<div class="acts">${acts}</div>`:`<span class="xp">${val!==undefined?val:(p.xp||0)}</span>`}</div>`;
 }
 function renderFriendLists(){
   const inEl=byId('reqin'),fl=byId('flist');if(!fl)return;
@@ -670,7 +714,8 @@ function showRanking(){
   $app.innerHTML=`
   <section class="panel">
     <div class="row" style="justify-content:space-between"><h2>Classement</h2>
-    <div class="seg" role="group" aria-label="Classement"><button type="button" data-rm="amis" aria-pressed="${RANKMODE==='amis'}">Mes amis</button><button type="button" data-rm="monde" aria-pressed="${RANKMODE==='monde'}">Mondial</button></div></div>
+    <div class="seg" role="group" aria-label="Classement"><button type="button" data-rm="amis" aria-pressed="${RANKMODE==='amis'}">Mes amis</button><button type="button" data-rm="semaine" aria-pressed="${RANKMODE==='semaine'}">Semaine</button><button type="button" data-rm="monde" aria-pressed="${RANKMODE==='monde'}">Mondial</button></div></div>
+    <p class="muted" style="font-size:13px" id="rkhint"></p>
     <div class="plist" id="rank"></div>
     <p class="foot">Points de classement : les points marqués en ligne et au défi du jour, plus ${XP_WIN} par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</p>
   </section>
@@ -682,6 +727,14 @@ function showRanking(){
 }
 function renderRank(){
   const el=byId('rank');if(!el)return;
+  const hint=byId('rkhint');if(hint)hint.textContent=RANKMODE==='semaine'?`Points marqués depuis lundi ${new Date(weekKey()+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}. Remise à zéro chaque lundi à minuit, heure des Antilles.`:RANKMODE==='amis'?'Tous tes points depuis ton inscription, comparés à ceux de tes amis.':'Tous les joueurs, tous les points depuis l\'inscription.';
+  if(RANKMODE==='semaine'){
+    const list=TOPW.filter(p=>p.pseudo&&weekPts(p)>0).sort((a,b)=>weekPts(b)-weekPts(a));const myIdx=list.findIndex(p=>p.uid===UID);
+    el.innerHTML=list.slice(0,100).map((p,i)=>prow(p.uid,{rank:i+1,me:p.uid===UID,val:weekPts(p)})).join('')
+      +(hasProfile()&&(myIdx===-1||myIdx>=100)?`<p class="foot">…</p>${prow(UID,{rank:myIdx===-1?'—':myIdx+1,me:true,val:weekPts(MEP)})}`:'')
+      +(list.length?'':'<p class="empty">Personne n\'a encore marqué de points cette semaine. À toi de prendre la tête !</p>');
+    return;
+  }
   if(RANKMODE==='amis'){
     if(!SESSION||!hasProfile()){el.innerHTML='<p class="empty">Connecte-toi et crée ton profil pour te comparer à tes amis.</p>';return;}
     const ids=[UID,...friendsList()];
@@ -749,7 +802,7 @@ async function createMatch(mode,dur,invites,maxp){
     const code=genCode();
     const {error}=await SB.from('matches').insert({code,host:UID,mode,dur,terr:settings.terr,themes:pickThemes(settings.terr),players:[UID],max_players:maxp,invites,
       invite:invites.length===1?invites[0]:null,pseudos:{[UID]:myPseudo()},avatars:{[UID]:myAvatar()}});
-    if(!error){await loadMatches();return code;}
+    if(!error){if(invites.length)notify({kind:'invite',code});await loadMatches();return code;}
     if(error.code!=='23505')throw error;
   }
   throw new Error('code');
@@ -923,7 +976,7 @@ async function awardMatch(code,res){
   if(!MEP||AWARDING[code]||(MEP.counted||[]).includes(code))return;
   AWARDING[code]=1;
   const bonus=res==='win'?XP_WIN:res==='tie'?XP_TIE:XP_PLAY;
-  const upd={xp:(MEP.xp||0)+bonus,games:(MEP.games||0)+1,wins:(MEP.wins||0)+(res==='win'?1:0),counted:[...(MEP.counted||[]),code].slice(-200)};
+  const upd={xp:(MEP.xp||0)+bonus,...weekUpd(bonus),games:(MEP.games||0)+1,wins:(MEP.wins||0)+(res==='win'?1:0),counted:[...(MEP.counted||[]),code].slice(-200)};
   try{await q(SB.from('profiles').update(upd).eq('id',UID));MEP={...MEP,...upd};checkBadges();}catch(e){AWARDING[code]=0;}
 }
 async function savePlay(code,rounds,jokers){
@@ -937,13 +990,13 @@ async function playOnline(code,M,mine,r){
   try{await savePlay(code,rounds,jokers);}catch(e){$app.innerHTML=`<section class="panel"><p class="bad">${esc(dbMsg(e))}</p></section>`;return;}
   const th=prep(M.themes[r]),base=sumPts({rounds:mine.rounds});
   playRound({who:myPseudo(),label:`Manche ${r+1}/${ROUNDS} · en ligne`,th,dur:M.dur,last:r===ROUNDS-1,jokers,score:base,
-    onFinish:async(found,pts,rej)=>{
+    onFinish:async(found,pts,rej,meta)=>{
       rounds[r]={found,pts,done:true};
       $app.innerHTML=`<section class="panel center pass"><h3>Manche ${r+1} terminée</h3><p class="big">+${pts}</p><p class="muted">Enregistrement…</p></section>`;
       let saved=true;
       try{await savePlay(code,rounds,jokers);await recordRound(M.themes[r],found,pts);}catch(e){saved=false;}
       if(!saved)toast('Enregistrement impossible : vérifie ta connexion. Ta manche sera comptée à 0 si elle n\'est pas sauvegardée.');
-      afterRound({title:`Manche ${r+1} terminée`,t:M.themes[r],found,pts,rej,btn:'Retour à la partie',next:()=>openMatch(code)});
+      afterRound({title:`Manche ${r+1} terminée`,t:M.themes[r],found,pts,rej,meta,btn:'Retour à la partie',next:()=>openMatch(code)});
     }});
 }
 
@@ -1004,7 +1057,11 @@ function renderDaily(){
   const d=todayKey(),played=MYDAILY&&MYDAILY.last===d;
   if(!played){st.innerHTML=`<button class="btn wide" id="dplay" type="button">Relever le défi</button>`;byId('dplay').onclick=playDaily;}
   else if(!MYDAILY.done)st.innerHTML=`<p class="muted">Tu as commencé le défi d'aujourd'hui sans le terminer. Reviens demain pour un nouveau thème !</p>`;
-  else st.innerHTML=`<div class="scoreline"><div class="sc"><span class="n">Ton score du jour</span><span class="v">${MYDAILY.last_pts}</span><span class="d">${MYDAILY.last_found} réponses · ${MYDAILY.count||1} défi${(MYDAILY.count||1)>1?'s':''} joué${(MYDAILY.count||1)>1?'s':''}</span></div></div>`;
+  else{let sh=null;try{const o=JSON.parse(localStorage.getItem('tibac_share')||'null');if(o&&o.d===d)sh=o.txt;}catch(e){}
+    if(!sh)sh=`Ti Bac Kréyol 🌴 Défi du ${d.slice(8,10)}/${d.slice(5,7)}\nThème : ${prep(dailyTheme(d)).title}\n${MYDAILY.last_found} réponses · ${MYDAILY.last_pts} pts\n${location.origin}${location.pathname}#defi`;
+    st.innerHTML=`<div class="scoreline"><div class="sc"><span class="n">Ton score du jour</span><span class="v">${MYDAILY.last_pts}</span><span class="d">${MYDAILY.last_found} réponses · ${MYDAILY.count||1} défi${(MYDAILY.count||1)>1?'s':''} joué${(MYDAILY.count||1)>1?'s':''}</span></div></div>
+    <button class="btn" id="dshare" type="button">Partager mon score</button>`;
+    byId('dshare').onclick=function(){shareScore(sh,this);};}
   const el=byId('drank');if(!el)return;
   el.innerHTML=DAILY_LIST.length?DAILY_LIST.map((x,i)=>{const p=player(x.user_id)||{pseudo:'…',avatar:x.avatar,xp:0};
     return `<div class="prow ${x.user_id===UID?'me':''}"><span class="rk">${i+1}</span>${avatar(p.avatar||x.avatar,40)}<div class="nm"><b>${esc(p.pseudo||'Joueur')}${x.user_id===UID?' (toi)':''}</b><small>${x.last_found} réponses</small></div><span class="xp">${x.last_pts}</span></div>`;}).join('')
@@ -1016,11 +1073,12 @@ async function playDaily(){
   try{await q(SB.from('dailyscores').upsert({user_id:UID,avatar:myAvatar(),last:d,last_pts:0,last_found:0,count,done:false,updated_at:new Date().toISOString()}));MYDAILY={user_id:UID,last:d,last_pts:0,last_found:0,count,done:false};}
   catch(e){$app.innerHTML=`<section class="panel"><p class="bad">${esc(dbMsg(e))}</p></section>`;return;}
   playRound({who:myPseudo(),label:'Défi du jour',th,dur:60,jokers:{time:0,hint:1},score:0,
-    onFinish:async(found,pts,rej)=>{
+    onFinish:async(found,pts,rej,meta)=>{
+      const share=dailyShareText(d,th,found,pts,meta);try{localStorage.setItem('tibac_share',JSON.stringify({d,txt:share}));}catch(e){}
       $app.innerHTML=`<section class="panel center pass"><h3>Défi terminé</h3><p class="big">+${pts}</p><p class="muted">Enregistrement…</p></section>`;
       try{await q(SB.from('dailyscores').update({last_pts:pts,last_found:found.length,done:true,updated_at:new Date().toISOString()}).eq('user_id',UID));
         MYDAILY={...MYDAILY,last_pts:pts,last_found:found.length,done:true};await recordRound(t,found,pts,{daily:count});}catch(e){toast(dbMsg(e));}
-      afterRound({title:'Défi du jour terminé',t,found,pts,rej,btn:'Voir le classement du jour',next:()=>go('defi')});
+      afterRound({title:'Défi du jour terminé',t,found,pts,rej,meta,share,btn:'Voir le classement du jour',next:()=>go('defi')});
     }});
 }
 
@@ -1037,7 +1095,12 @@ function showAdmin(){
     <div class="row"><div class="seg" role="group" aria-label="Points"><button type="button" data-ap="1" aria-pressed="true">1 pt</button><button type="button" data-ap="2" aria-pressed="false">2 pts</button><button type="button" data-ap="3" aria-pressed="false">3 pts</button></div>
     <button class="btn" id="aadd" type="button">Ajouter</button><span id="amsg" aria-live="polite"></span></div>
   </section>
-  <section class="panel"><h3>Réponses ajoutées</h3><div id="aextras"></div></section>`;
+  <section class="panel"><h3>Réponses ajoutées</h3><div id="aextras"></div></section>
+  <section class="panel"><h3>Statistiques des réponses</h3>
+    <p class="muted" style="font-size:14px">Pour chaque thème : combien de fois chaque réponse est trouvée. Les points suggérés se basent sur ce taux (40 % ou plus : 1 pt ; 10 à 39 % : 2 pts ; moins de 10 % : 3 pts), à partir de ${STAT_MIN} manches jouées.</p>
+    <label class="fld">Thème<select id="sth"><option value="">Chargement…</option></select></label>
+    <div id="sbox"></div><p class="foot" id="purge"></p></section>`;
+  loadStats();
   let pts=1;
   $app.querySelectorAll('[data-ap]').forEach(b=>b.onclick=()=>{pts=+b.dataset.ap;$app.querySelectorAll('[data-ap]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
   byId('aadd').onclick=async()=>{
@@ -1072,6 +1135,77 @@ function renderAdmin(){
   ex.innerHTML=rows.length?`<div class="scroll"><table class="tbl"><thead><tr><th>Réponse</th><th>Thème</th><th>Pts</th><th></th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${esc(r.x.name)}${(r.x.alias||[]).length?`<br><small class="muted">${esc(r.x.alias.join(', '))}</small>`:''}</td><td>${esc((THEMES[r.t]||{t:'?'}).t)}</td><td>${ptsLabel(r.x.pts)}</td><td><button class="btn ghost sm" data-del="${i}" type="button">Retirer</button></td></tr>`).join('')}</tbody></table></div>`
     :'<p class="empty">Aucune réponse ajoutée pour l\'instant.</p>';
   ex.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{b.disabled=true;const r=rows[+b.dataset.del];try{await q(SB.from('extras').delete().eq('id',r.x.id));await loadExtras();renderAdmin();}catch(e){b.disabled=false;}});
+}
+
+/* Statistiques (admin) */
+const STAT_MIN=10;let STATS=null;
+async function loadStats(){
+  try{const [ts,lg]=await Promise.all([q(SB.from('theme_stats').select('*')),q(SB.from('maintenance_log').select('at,result').order('at',{ascending:false}).limit(1))]);
+    STATS={rounds:Object.fromEntries(ts.map(r=>[r.theme,r.rounds])),found:{}};
+    const pg=byId('purge');if(pg&&lg[0]){const r=lg[0].result||{};pg.textContent=`Dernier nettoyage automatique : ${new Date(lg[0].at).toLocaleString('fr-FR')} · ${r.comptes||0} compte(s), ${r.parties||0} partie(s), ${r.defis||0} score(s) du jour, ${r.signalements||0} signalement(s) supprimés.`;}
+  }catch(e){STATS={rounds:{},found:{}};}
+  const sel=byId('sth');if(!sel)return;
+  const all=THEMES.map((t,i)=>i).filter(i=>!THEMES[i].off).sort((a,b)=>(STATS.rounds[b]||0)-(STATS.rounds[a]||0));
+  sel.innerHTML=all.map(i=>`<option value="${i}">${esc(THEMES[i].t)} · ${STATS.rounds[i]||0} manche${(STATS.rounds[i]||0)>1?'s':''}</option>`).join('');
+  sel.onchange=renderStatsTable;renderStatsTable();
+}
+function suggestPts(rate){return rate>=0.4?1:rate>=0.1?2:3;}
+async function renderStatsTable(){
+  const box=byId('sbox'),sel=byId('sth');if(!box||!sel||!STATS)return;
+  const t=+sel.value,th=prep(t),n=STATS.rounds[t]||0;
+  if(!n){box.innerHTML='<p class="empty">Ce thème n\'a pas encore été joué.</p>';return;}
+  if(!STATS.found[t]){box.innerHTML='<p class="muted">Chargement…</p>';
+    try{const as=await q(SB.from('answer_stats').select('name,found').eq('theme',t).limit(1000));STATS.found[t]=Object.fromEntries(as.map(r=>[r.name,r.found]));}catch(e){STATS.found[t]={};}
+    if(+sel.value!==t)return;}
+  const f=STATS.found[t];
+  const rows=th.answers.map(a=>({a,c:f[a.name]||0,rate:(f[a.name]||0)/n})).sort((x,y)=>y.rate-x.rate);
+  const enough=n>=STAT_MIN,diff=enough?rows.filter(r=>suggestPts(r.rate)!==r.a.pts).length:0,never=rows.filter(r=>!r.c).length;
+  box.innerHTML=`<p class="muted" style="font-size:14px">${n} manche${n>1?'s':''} jouée${n>1?'s':''} · ${never} réponse${never>1?'s':''} jamais trouvée${never>1?'s':''}${enough?` · ${diff} réponse${diff>1?'s':''} dont les points pourraient changer (surlignées)`:` · encore ${STAT_MIN-n} manche${STAT_MIN-n>1?'s':''} avant de suggérer des points`}</p>
+  <div class="scroll"><table class="tbl"><thead><tr><th>Réponse</th><th class="num">Trouvée</th><th>Pts</th>${enough?'<th>Suggéré</th>':''}</tr></thead><tbody>
+  ${rows.map(r=>{const sg=suggestPts(r.rate),chg=enough&&sg!==r.a.pts;return `<tr class="${r.c?'':'miss'} ${chg?'chg':''}"><td>${esc(r.a.name)}</td><td class="num">${Math.round(r.rate*100)} %<br><small class="muted">${r.c} fois</small></td><td>${ptsLabel(r.a.pts)}</td>${enough?`<td>${chg?ptsLabel(sg):'<span class="dash">=</span>'}</td>`:''}</tr>`;}).join('')}</tbody></table></div>
+  <div class="row"><button class="btn ghost sm" id="scopy" type="button">Copier ce tableau</button></div>`;
+  byId('scopy').onclick=function(){copyText([`${th.title} (${n} manches)`,...rows.map(r=>`${r.a.name}\t${Math.round(r.rate*100)} %\t${r.a.pts} pt(s)${enough&&suggestPts(r.rate)!==r.a.pts?`\t→ ${suggestPts(r.rate)} pt(s)`:''}`)].join('\n'),this,'Tableau copié');};
+}
+
+/* =================== NOTIFICATIONS =================== */
+const VAPID_PUBLIC=CFG.VAPID_PUBLIC||'BFBJao_wWea2059-JIdFbfR3mLqWs6RxtHtEdG4PohThMNJ8PYSWphBbFyRzLHT0QEd2jJ1TKRujuXks099aHgo';
+const PUSH_OK=('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+let MYSUB=null;
+function b64ToBytes(b){const p='='.repeat((4-b.length%4)%4);const s=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...s].map(c=>c.charCodeAt(0)));}
+async function currentPush(){if(!PUSH_OK)return null;try{const reg=await navigator.serviceWorker.ready;return await reg.pushManager.getSubscription();}catch(e){return null;}}
+async function loadMySub(){MYSUB=null;const sub=await currentPush();if(!sub||!UID)return;
+  try{MYSUB=await q(SB.from('push_subs').select('daily,invites').eq('endpoint',sub.endpoint).maybeSingle());}catch(e){}}
+async function enablePush(daily,invites){
+  if(Notification.permission==='denied')throw new Error('refus');
+  const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('refus');
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(VAPID_PUBLIC)});
+  const j=sub.toJSON();
+  await q(SB.rpc('save_push_sub',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_daily:daily,p_invites:invites}));
+  MYSUB={daily,invites};
+}
+async function disablePush(){const sub=await currentPush();if(sub){try{await q(SB.from('push_subs').delete().eq('endpoint',sub.endpoint));}catch(e){}try{await sub.unsubscribe();}catch(e){}}MYSUB=null;}
+function notify(body){if(!SB||!SESSION)return;SB.functions.invoke('notify',{body}).catch(()=>{});}
+function pushPanel(){
+  if(!hasProfile())return '';
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  let inner;
+  if(!PUSH_OK)inner=ios&&!isStandalone()?'<p class="muted" style="font-size:14px">Sur iPhone, installe d\'abord le jeu sur l\'écran d\'accueil (Partager → « Sur l\'écran d\'accueil »), puis ouvre-le depuis l\'icône pour activer les notifications.</p>':'<p class="muted" style="font-size:14px">Ce navigateur ne permet pas les notifications. Essaie avec Chrome, ou installe le jeu sur l\'écran d\'accueil.</p>';
+  else if(Notification.permission==='denied')inner='<p class="muted" style="font-size:14px">Les notifications sont bloquées pour ce site. Autorise-les dans les réglages du navigateur ou du téléphone, puis reviens ici.</p>';
+  else if(!MYSUB)inner=`<p class="muted" style="font-size:14px">Reçois un rappel quand ton défi du jour t'attend (vers 17 h 30 si tu ne l'as pas encore joué), et une alerte quand un ami t'invite à une partie ou t'envoie une demande.</p><div class="row"><button class="btn" id="pon" type="button">Activer les notifications</button><span id="pmsg" aria-live="polite"></span></div>`;
+  else inner=`<label class="chk"><input type="checkbox" id="pdaily" ${MYSUB.daily?'checked':''}> Rappel du défi du jour</label>
+    <label class="chk"><input type="checkbox" id="pinv" ${MYSUB.invites?'checked':''}> Invitations et demandes d'amis</label>
+    <div class="row"><button class="btn ghost sm" id="ptest" type="button">M'envoyer un essai</button><button class="btn ghost sm" id="poff" type="button">Désactiver sur ce téléphone</button><span id="pmsg" aria-live="polite"></span></div>`;
+  return `<section class="panel"><h3>Notifications sur ce téléphone</h3>${inner}</section>`;
+}
+function bindPush(){
+  const msg=t=>{const m=byId('pmsg');if(m){m.className='muted';m.textContent=t;}};
+  const on=byId('pon');if(on)on.onclick=async function(){this.disabled=true;msg('Activation…');try{await enablePush(true,true);showAccount();toast('Notifications activées.');}catch(e){this.disabled=false;msg(e&&e.message==='refus'?'Autorisation refusée par le téléphone.':'Activation impossible pour l\'instant.');}};
+  const upd=async()=>{const d=byId('pdaily').checked,i=byId('pinv').checked;const sub=await currentPush();if(!sub)return;try{await q(SB.from('push_subs').update({daily:d,invites:i}).eq('endpoint',sub.endpoint));MYSUB={daily:d,invites:i};msg('Enregistré');}catch(e){msg(dbMsg(e));}};
+  const pd=byId('pdaily');if(pd){pd.onchange=upd;byId('pinv').onchange=upd;}
+  const off=byId('poff');if(off)off.onclick=async function(){this.disabled=true;await disablePush();showAccount();};
+  const tst=byId('ptest');if(tst)tst.onclick=async function(){this.disabled=true;msg('Envoi…');try{const {data}=await SB.functions.invoke('notify',{body:{kind:'test'}});msg(data&&data.sent?'Envoyé ! Regarde tes notifications.':'Rien n\'est parti : désactive puis réactive les notifications.');}catch(e){msg('Envoi impossible.');}this.disabled=false;};
 }
 
 /* =================== INSTALLER L'APPLI =================== */
@@ -1176,16 +1310,16 @@ function showRules(){
       <div class="rule"><b>${ptsLabel(1)} Classique</b><span>Fort-de-France, mangue, colombo…</span></div>
       <div class="rule"><b>${ptsLabel(2)} Rare</b><span>Case-Pilote, quénette, souskaï…</span></div>
       <div class="rule"><b>${ptsLabel(3)} Très rare</b><span>Macouba, icaque, Kolo Barst…</span></div>
-    </div><ul><li>Réponse classique : 1 point.</li><li>Réponse rare : 2 points.</li><li>Réponse très rare : 3 points.</li><li>Une réponse déjà trouvée ou absente de la liste ne rapporte rien et n'enlève aucun point.</li></ul></section>
+    </div><ul><li>Réponse classique : 1 point.</li><li>Réponse rare : 2 points.</li><li>Réponse très rare : 3 points.</li><li>Une réponse déjà trouvée ou absente de la liste ne rapporte rien et n'enlève aucun point.</li><li>Bonus combo : toutes les ${COMBO_EVERY} bonnes réponses d'affilée, sans erreur entre elles, +${COMBO_BONUS} points (à ${COMBO_EVERY}, ${COMBO_EVERY*2}, ${COMBO_EVERY*3}…). Une réponse absente de la liste remet la série à zéro ; une réponse déjà trouvée ne la casse pas.</li></ul></section>
   <section><span class="art">ARTICLE 3 BIS</span><h4>Les thèmes</h4><p>${activeThemes(null).length} thèmes, classés par territoire. Au moment de lancer une partie, le jeu tire au sort parmi les thèmes des territoires choisis et les thèmes communs.</p>
     ${[['AN','Communs aux Antilles et à la Guyane'],...TERRS].map(([k,n])=>{const list=activeThemes(null).filter(i=>THEMES[i].terr===k);return list.length?`<h5 class="tgh">${esc(n)} · ${list.length}</h5><div class="themes">${list.map(i=>`<span>${esc(THEMES[i].t)}</span>`).join('')}</div>`:'';}).join('')}</section>
   <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Les orthographes qui se prononcent de la même façon sont acceptées, en français comme en créole : k ou c ou qu, w ou ou, é ou er, an ou en, lettres doublées, lettres muettes en fin de mot (par exemple Kolonbo pour Colombo, konpè Lapen pour Compère Lapin, chatwou pour chatrou, piman pour piment). Quand une réponse pourrait correspondre à deux réponses différentes de la liste, elle n'est pas comptée.</p></section>
   <section><span class="art">ARTICLE 5</span><h4>Jokers</h4><ul><li>+15 secondes : prolonge une manche de 15 secondes. Un seul par partie.</li><li>Indice : affiche les deux premières lettres et la longueur d'une réponse non trouvée. Deux par partie.</li></ul></section>
-  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Appui long sur une partie dans « Mes parties » pour la supprimer. Une partie terminée est seulement retirée de ta liste (tes points sont conservés). Si la partie est en cours, tu l'abandonnes : tes manches sont retirées et les autres joueurs continuent sans toi. Si un seul joueur reste, il termine seul.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
+  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>Mode Ti moun : pour les enfants, sur le même téléphone. Les thèmes sont simples (couleurs, chiffres et corps en créole, animaux, plage, contes, carnaval, jeux, métiers, fruits, mots du quotidien), les réponses sont acceptées en français ou en créole, et chaque joueur a 3 indices.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Appui long sur une partie dans « Mes parties » pour la supprimer. Une partie terminée est seulement retirée de ta liste (tes points sont conservés). Si la partie est en cours, tu l'abandonnes : tes manches sont retirées et les autres joueurs continuent sans toi. Si un seul joueur reste, il termine seul.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
   <section><span class="art">ARTICLE 7</span><h4>Fin de partie et égalité</h4><p>Les joueurs sont classés selon leur total de points à l'issue des ${ROUNDS} manches. En cas d'égalité de points, le joueur qui a trouvé le plus de réponses passe devant. Si l'égalité persiste, les joueurs partagent la même place. Bonus de classement : ${XP_WIN} points pour le vainqueur, ${XP_TIE} points en cas de première place partagée, ${XP_PLAY} points pour les autres participants.</p></section>
   <section><span class="art">ARTICLE 8</span><h4>Profil, pseudo et amis</h4><ul><li>Pour jouer en ligne, chaque joueur crée un compte gratuit (adresse e-mail et mot de passe), puis un profil avec un pseudo unique et un personnage des contes créoles.</li><li>Le pseudo doit rester correct : pas d'insulte, pas d'usurpation d'identité. L'éditeur peut modifier ou supprimer un pseudo inapproprié.</li><li>On ajoute un ami en saisissant son pseudo. L'amitié est confirmée quand l'autre joueur accepte la demande.</li></ul></section>
-  <section><span class="art">ARTICLE 9</span><h4>Classement et niveaux</h4><ul><li>Seules les parties en ligne comptent pour le classement.</li><li>Points de classement : tous les points marqués en ligne, plus ${XP_WIN} points par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</li><li>Deux classements : entre amis, et mondial (tous les joueurs).</li><li>Niveaux : ${LEVELS.map(([m,n])=>`${n} (${m})`).join(', ')}.</li></ul></section>
-  <section><span class="art">ARTICLE 10</span><h4>Défi du jour</h4><ul><li>Chaque jour, un thème est tiré au sort et proposé à tous les joueurs. Il change à minuit, heure des Antilles.</li><li>Une seule tentative par jour, de 60 secondes, avec un indice. Une tentative commencée compte, même si elle n'est pas terminée.</li><li>Un classement du jour réunit tous les participants. Les points du défi s'ajoutent aux points de classement.</li></ul></section>
+  <section><span class="art">ARTICLE 9</span><h4>Classement et niveaux</h4><ul><li>Seules les parties en ligne et le défi du jour comptent pour le classement.</li><li>Points de classement : tous les points marqués en ligne, plus ${XP_WIN} points par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</li><li>Trois classements : entre amis, de la semaine et mondial (tous les joueurs). Le classement de la semaine compte les points marqués depuis le lundi ; il repart de zéro chaque lundi à minuit, heure des Antilles.</li><li>Niveaux : ${LEVELS.map(([m,n])=>`${n} (${m})`).join(', ')}.</li></ul></section>
+  <section><span class="art">ARTICLE 10</span><h4>Défi du jour</h4><ul><li>Chaque jour, un thème est tiré au sort et proposé à tous les joueurs. Il change à minuit, heure des Antilles.</li><li>Une seule tentative par jour, de 60 secondes, avec un indice. Une tentative commencée compte, même si elle n'est pas terminée.</li><li>Un classement du jour réunit tous les participants. Les points du défi s'ajoutent aux points de classement.</li><li>À la fin du défi, le bouton « Partager mon score » prépare un message à envoyer à ses proches, sans dévoiler les réponses : un carré vert par réponse à 1 point, jaune à 2 points, violet à 3 points.</li><li>Les joueurs qui ont activé les notifications reçoivent un rappel vers 17 h 30 s'ils n'ont pas encore joué le défi du jour.</li></ul></section>
   <section><span class="art">ARTICLE 11</span><h4>Badges</h4><p>Des badges récompensent certains exploits : ${BADGES.map(b=>`${esc(b.n)} (${esc(b.d.toLowerCase())})`).join(', ')}.</p></section>
   <section><span class="art">ARTICLE 12</span><h4>Fair-play</h4><ul><li>Les recherches sur internet, les livres et l'aide d'une autre personne sont interdits pendant une manche.</li><li>En ligne, une manche commencée est comptée même si le joueur quitte la page.</li><li>Le thème d'une manche en ligne reste caché tant que le joueur ne l'a pas jouée.</li></ul></section>
   <section><span class="art">ARTICLE 13</span><h4>Signaler une réponse</h4><p>Les listes de réponses peuvent contenir des oublis ou des erreurs. À la fin de chaque manche, le joueur peut signaler une réponse refusée qu'il pense correcte. L'éditrice examine chaque signalement et décide de l'ajouter ou non, avec le nombre de points qu'elle juge juste. Une réponse ajoutée est acceptée dans les parties suivantes ; les résultats déjà enregistrés ne sont pas modifiés.</p></section>
@@ -1204,15 +1338,17 @@ function showLegal(){
   <section><h4>Propriété intellectuelle</h4><p>Le concept, la présentation, les illustrations des personnages, les textes et les listes de réponses de Ti Bac Kréyol sont la propriété de l'éditrice. Toute reproduction sans autorisation est interdite. Les personnages représentés sont issus des contes, légendes et carnavals traditionnels des Antilles et de la Guyane. Les noms de marques cités dans les thèmes appartiennent à leurs propriétaires et sont mentionnés à titre informatif, sans partenariat.</p></section>
   <section><h4>Contenus</h4><p>Les listes de réponses ont été établies à partir de connaissances générales sur les Antilles et la Guyane. Elles ne sont pas exhaustives et peuvent contenir des erreurs. Tout signalement est bienvenu, depuis le jeu ou à l'adresse de contact.</p></section>
   <section><h4>Données personnelles</h4><ul>
-    <li>Données traitées : ton adresse e-mail (pour la connexion), un identifiant technique de compte, ton pseudo, ton personnage, ta liste d'amis et les demandes d'amis, tes résultats (réponses trouvées, points, victoires, niveau, badges, scores du défi du jour) et les réponses que tu signales. Ton mot de passe est chiffré et n'est jamais visible par l'éditrice.</li>
+    <li>Données traitées : ton adresse e-mail (pour la connexion), un identifiant technique de compte, ton pseudo, ton personnage, ta liste d'amis et les demandes d'amis, tes résultats (réponses trouvées, points, points de la semaine, victoires, niveau, badges, scores du défi du jour), la date de ta dernière activité, les réponses que tu signales et, si tu actives les notifications, l'adresse technique d'envoi fournie par ton navigateur et tes choix de notifications. Ton mot de passe est chiffré et n'est jamais visible par l'éditrice.</li>
     <li>Visibilité : ton pseudo, ton personnage, ton niveau et tes points sont visibles par les autres joueurs, notamment dans les classements. Ton adresse e-mail n'est jamais affichée. Les réponses signalées ne sont visibles que par l'éditrice.</li>
+    <li>Statistiques : pour ajuster les points des réponses, le jeu compte combien de fois chaque réponse est trouvée dans chaque thème. Ces compteurs sont anonymes : ils ne sont reliés à aucun joueur.</li>
+    <li>Notifications : elles ne sont envoyées qu'aux joueurs qui les ont activées (rappel du défi du jour, invitations, demandes d'amis). On peut les couper à tout moment dans l'onglet Connexion ou dans les réglages du téléphone. Elles passent par le service de notification du navigateur (Google, Apple ou Mozilla).</li>
     <li>Finalité : faire fonctionner les comptes, les parties en ligne, le système d'amis, les classements et l'amélioration des listes. Aucune donnée n'est vendue ni utilisée à des fins publicitaires.</li>
-    <li>Durées de conservation : le compte et le profil sont supprimés après 2 ans sans connexion, ou immédiatement sur demande ; les parties en ligne et les scores sont conservés 12 mois ; les réponses signalées sont conservées 12 mois après leur traitement.</li>
+    <li>Durées de conservation : le compte et le profil sont supprimés après 2 ans sans connexion, ou immédiatement sur demande ; les parties en ligne et les scores sont conservés 12 mois ; les réponses signalées sont conservées 12 mois après leur traitement. Ce nettoyage est fait automatiquement chaque nuit.</li>
     <li>Tu peux supprimer toi-même ton compte et toutes tes données depuis l'onglet Connexion (« Supprimer mon compte »).</li>
     <li>Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'opposition et de suppression de tes données. Pour l'exercer, écris à ${MAIL}. Tu peux aussi adresser une réclamation à la CNIL (cnil.fr).</li>
   </ul></section>
-  <section><h4>Stockage local</h4><p>Le jeu enregistre dans ton navigateur ta session de connexion et tes préférences (noms des joueurs, durée des manches, territoires choisis, sons), et garde une copie des fichiers du jeu pour s'ouvrir plus vite. Il n'utilise pas de cookies publicitaires ni de traceurs tiers.</p></section>
-  <section><h4>Mise à jour</h4><p>Mentions mises à jour le 27 septembre 2026.</p></section>
+  <section><h4>Stockage local</h4><p>Le jeu enregistre dans ton navigateur ta session de connexion et tes préférences (noms des joueurs, durée des manches, territoires choisis, sons), ton meilleur nombre de réponses par thème et ton dernier score du défi à partager, et garde une copie des fichiers du jeu pour s'ouvrir plus vite. Il n'utilise pas de cookies publicitaires ni de traceurs tiers.</p></section>
+  <section><h4>Mise à jour</h4><p>Mentions mises à jour le 29 septembre 2026.</p></section>
   </div></section>`;
   byId('cpmail').onclick=function(){copyText(MAIL,this);};
 }

@@ -1,5 +1,5 @@
 // Ti Bac Kréyol — service worker : ouverture rapide et jeu solo hors connexion
-const VERSION='tibac-v11';
+const VERSION='tibac-v12';
 const SHELL=[
  "./",
  "index.html",
@@ -41,4 +41,19 @@ self.addEventListener('fetch',e=>{
   }else{ // images : copie locale d'abord
     e.respondWith(caches.match(req).then(r=>r||fetch(req).then(res=>{const cp=res.clone();caches.open(VERSION).then(c=>c.put(req,cp));return res;})));
   }
+});
+
+// Notifications : défi du jour, invitations, demandes d'amis
+self.addEventListener('push',e=>{
+  let d={};try{d=e.data?e.data.json():{};}catch(err){d={body:e.data&&e.data.text()};}
+  e.waitUntil(self.registration.showNotification(d.title||'Ti Bac Kréyol',{
+    body:d.body||'',tag:d.tag||'tibac',renotify:true,icon:'icons/icon-192.png',badge:'icons/icon-192.png',data:{url:d.url||'./'}}));
+});
+self.addEventListener('notificationclick',e=>{
+  e.notification.close();
+  const url=new URL((e.notification.data&&e.notification.data.url)||'./',self.registration.scope).href;
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(ws=>{
+    for(const w of ws){if(w.url.startsWith(self.registration.scope)&&'focus' in w){return w.navigate(url).then(x=>(x||w).focus()).catch(()=>w.focus());}}
+    return clients.openWindow(url);
+  }));
 });

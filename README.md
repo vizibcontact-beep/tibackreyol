@@ -34,6 +34,8 @@ Durée : environ 45 minutes. Coût : 0 €.
    Tu dois voir « Success. No rows returned ».
 5. Recommence avec le fichier `supabase/migration-2-multijoueur.sql` (parties en ligne de 2 à 5 joueurs) : **New query**, coller, **Run**.
 6. Idem avec `supabase/migration-3-quitter-partie.sql` (supprimer ou quitter une partie).
+7. Idem avec `supabase/migration-4-nettoyage-stats-notifs.sql` (statistiques des réponses, classement de la semaine, notifications, nettoyage automatique), puis `supabase/migration-4b-taches-planifiees.sql` (tâches de chaque nuit et rappel du défi).
+8. Notifications : déploie la fonction `supabase/functions/notify` (Edge Functions → Deploy, **sans** « Verify JWT »), puis remplis la table `app_secrets` : `vapid_public`, `vapid_private` (clés générées avec `npx web-push generate-vapid-keys`), `vapid_subject` (`mailto:ton@adresse`), `cron_secret` (une longue suite de caractères au hasard) et `functions_url` (`https://TON-PROJET.supabase.co/functions/v1`). Mets la même clé publique dans `config.js` (`VAPID_PUBLIC`).
 
 ## Étape 2 — Relier le jeu à la base
 
@@ -102,9 +104,8 @@ Sans cette étape, les liens des e-mails (confirmation, mot de passe oublié) ne
 
 - Chaque joueur peut supprimer son compte et toutes ses données depuis l'onglet **Connexion**.
 - Tu peux consulter et supprimer des données dans Supabase → **Table Editor**.
-- Les durées de conservation annoncées dans les mentions légales (2 ans sans connexion, 12 mois pour les parties et les signalements) se gèrent à la main pour l'instant : fais un nettoyage une ou deux fois par an.
+- Les durées de conservation annoncées dans les mentions légales (2 ans sans connexion, 12 mois pour les parties, les scores du jour et les signalements traités) sont appliquées automatiquement chaque nuit à 3 h 17 (heure des Antilles). Le résultat du dernier nettoyage s'affiche en bas de l'onglet Admin.
 
 ## Limites connues de cette première version
 
 - Les scores sont calculés sur le téléphone de chaque joueur : un joueur très motivé pourrait tricher. Les règles de la base empêchent de modifier le score **d'un autre**, mais pas le sien. À renforcer avant un grand lancement (vérification des scores côté serveur).
-- La suppression automatique des comptes inactifs n'est pas encore programmée.

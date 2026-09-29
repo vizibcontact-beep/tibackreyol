@@ -515,3 +515,26 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
  fixAns(EP,"*Chadron béni|chadron beni,coriandre","*Chadron béni|chadron beni,chadon beni,chardon beni,chadon,fitoula,coulante");
  addAlias(EP,"Bonda Man Jacques",["bondamanjak","bonda man jak"]);
 })();
+
+/* ---- Mode Ti moun : thèmes simples pour les enfants (réponses en français ou en créole) ---- */
+(function(){
+ const K=(t,a,anec,opt)=>{THEMES.push({terr:'AN',t,a,kid:true,...(opt||{})});ANEC[THEMES.length-1]=anec||[];};
+ K("Les couleurs (en français ou en créole)",["Rouge|wouj","Bleu|blé","Vert|vèt,vet","Jaune|jòn,jon","Noir|nwè,nwe","Blanc|blan","Rose|woz","Orange|zoranj","Violet|vyolèt,vyolet","Marron|mawon","Gris|gri","*Doré|dore","*Argenté|argente","*Turquoise","*Beige"],
+  ["En créole, on dit « wouj » pour rouge et « jòn » pour jaune."]);
+ K("Compter de 1 à 10 en créole",["Yonn|yon,youn","Dé|de","Twa","Kat","Senk|sink","Sis","Sèt|set","Uit|wit","Nèf|nef","Dis"],
+  ["En créole, on compte : yonn, dé, twa, kat, senk, sis, sèt, uit, nèf, dis."],{keep:['de']});
+ K("Le corps en créole",["Tèt|tet","Zyé|zye,zie","Nen","Bouch","Zòrèy|zorey,zorèy","Lanmen|lamen","Pyé|pye","Dan","Chivé|cheve,chive","Vant","Do","Jounou","*Zong","*Kou","*Zépòl|zepol","*Dwèt|dwet","*Lang","*Kò|ko"],
+  ["« Lanmen » veut dire la main, et « pyé » le pied."]);
+ K("Les animaux de chez nous",["Chat","Chien|chyen","Poule|poul","Coq|kok","Cochon|kochon","Bœuf|bef,bèf,boeuf","Cabri|kabrit,chèvre,chevre","Mouton","Lapin|lapen","Âne|bourik,ane","Cheval|chouval","Canard|kanna","Anolis|zandoli","Crabe|krab","Poisson|pwason","Colibri|kolibri,foufou","Manicou|manikou","Mangouste|mangous","Iguane|igwann","Tortue|toti,tòti","Grenouille|krapo,crapaud","*Mabouya","*Agouti|zagouti","*Cafard|ravet","*Papillon|papiyon","*Fourmi|fonmi,fwonmi","*Moustique|moustik"],
+  ["Le colibri est le plus petit oiseau des Antilles : il peut voler sur place et même en arrière !"]);
+ K("À la plage",["Sable|sab","Mer|lanmè,lanme","Vague|lanm","Soleil|solèy,soley","Coquillage|koki","Crabe|krab","Poisson|pwason","Cocotier|pyé koko,pye koko","Serviette","Maillot de bain|maillot","Parasol","Seau","Pelle","Château de sable|chateau de sable","Bouée|bouee","Masque","*Tuba","*Palmes","*Oursin|chadron","*Bateau|kannot,canot","*Crème solaire|creme solaire","*Raisinier|rézinyé,rezinye","*Tortue marine|tortue"],
+  ["Attention au mancenillier au bord des plages : ses fruits ressemblent à des petites pommes, mais ils sont très toxiques."]);
+ K("Personnages des contes et légendes",["Compère Lapin|konpè lapen,lapen,lapin","Compère Zamba|konpè zanba,zamba,zanba","Compère Tig|tig,konpe tig","Manman Dlo|maman dlo,mama dlo","Ti-Jean|ti jan,tijan,ti jean","Soukougnan|soukouyan","Diablesse|djablès,djables","Zombi|zonbi","*Chouval twa pat|cheval trois pattes,chouval 3 pat","*Bête à Man Ibè|manibe,bet a man ibe","*Konpè Kabrit|compere cabri,kabrit","*Dorlis","*Volant|volan","*Papa Diab|diab,diable"],
+  ["Dans les contes, Compère Lapin est petit mais très malin : il gagne souvent contre Compère Zamba, qui est grand et fort."]);
+ K("Au carnaval",["Vaval","Touloulou","Diable rouge|djab wouj,diab wouj","Masque|mas","Déguisement|deguisement","Char","Tambour|tanbou","Confettis","Vidé|vide","Mardi gras|madi gra","Mercredi des Cendres|mercredi des cendres","Diablesse|djablès","*Bwa bwa|bwabwa","*Nèg gwo siwo|neg gwo siwo","*Caroline zié kokli|karolin,caroline","*Mariyan lapofig|lapofig","*Mariage burlesque"],
+  ["Vaval, le roi du carnaval, est brûlé le mercredi des Cendres, et tout le monde lui dit au revoir en noir et blanc."]);
+ K("Jeux de la cour de récré",["Cache-cache|cache cache","Marelle","Corde à sauter|corde","Loup|chat","Billes|mab,bille","Toupie|toupi","Cerf-volant|sèvolan,sevolan,kap","Ballon|foot,football","Chat perché|chat perche","Un deux trois soleil|1 2 3 soleil,123 soleil","Élastique|elastique","*Osselets|osselet","*Dominos|domino","*Colin-maillard|colin maillard","*Chaise musicale|chaises musicales","*Ronde"],
+  ["Autrefois, les enfants des Antilles fabriquaient leurs cerfs-volants avec des baguettes de bambou et du papier de soie."]);
+ K("Les métiers",["Pêcheur|pechè,pecheur","Boulanger|boulangère","Docteur|médecin,medecin","Maître|maîtresse,professeur,prof","Pompier","Policier|gendarme","Agriculteur|planteur,cultivateur","Coiffeur|coiffeuse","Chauffeur|chauffeur de bus","Marchande|machann,marchand","Infirmier|infirmière","Cuisinier|cuisinière","Facteur","Maçon|macon","*Charpentier","*Vétérinaire|veterinaire","*Conteur|kontè,konte","*Musicien","*Pilote","*Dentiste"],
+  ["Au marché, on dit « machann » pour la marchande."]);
+})();

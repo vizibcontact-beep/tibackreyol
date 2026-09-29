@@ -205,3 +205,6 @@ button.mitem.pressing{transform:scale(.97);border-color:var(--red)}
 .combo.rec{color:#7FE0B0}
 @keyframes comboBump{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion: reduce){.combo.on,.combo.bump{animation:none}}
+.chk{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;padding:6px 0;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--gold)}
+.tbl tr.chg td{background:rgba(255,196,0,.12)}
