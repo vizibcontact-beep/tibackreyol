@@ -21,15 +21,41 @@ function prep(i){
   const added=(EXTRA[i]||[]).map(x=>'*'.repeat(Math.max(0,Math.min(3,x.pts||1)-1))+x.name+((x.alias||[]).length?'|'+x.alias.join(','):''));
   return PREP[i]={idx:i,title:th.t,extra,answers:[...th.a,...added].map(s=>{let pts=1;while(s[0]==='*'){pts++;s=s.slice(1);}
     const [name,al]=s.split('|');const keys=[name,...(al?al.split(','):[])].map(k=>norm(k,extra)).filter(Boolean);
-    return {name,pts,keys:[...new Set(keys)]};})};
+    return {name,pts,keys:[...new Set(keys)],pkeys:[...new Set(keys.map(phon))]};})};
+}
+/* Clé « sonore » : deux orthographes qui se prononcent pareil (français ou créole) donnent la même clé.
+   Ex. : Compère / Konpè, Colombo / Kolonbo, chatrou / chatwou, manger / manjé, piment / piman. */
+function phon(k){
+  let s=' '+k+' ';
+  s=s.replace(/tch/g,'tj').replace(/ch/g,'§').replace(/sh/g,'§').replace(/ph/g,'f').replace(/th/g,'t')
+   .replace(/qu/g,'k').replace(/ck/g,'k').replace(/c(?=[eiy])/g,'s').replace(/c/g,'k').replace(/x/g,'ks')
+   .replace(/gu(?=[eiy])/g,'g').replace(/g(?=[eiy])/g,'j').replace(/h/g,'')
+   .replace(/eau/g,'o').replace(/au/g,'o').replace(/oi/g,'wa').replace(/ou/g,'w')
+   .replace(/r(?=[ow])/g,'w')
+   .replace(/[ae]i(?=[^nm])/g,'e').replace(/y/g,'i')
+   .replace(/m(?=[pb])/g,'n').replace(/(?:ain|ein|im(?=[^aeiouw])|in(?=[^aeiouw]))/g,'IN')
+   .replace(/(?:an|en|am(?=[^aeiouw])|em(?=[^aeiouw]))(?=[^aeiouw])/g,'AN')
+   .replace(/z/g,'s').replace(/(er|ez|et|es|e|t|d)(?= )/g,'')
+   .replace(/(.)\1+/g,'$1').toLowerCase().replace(/\s+/g,'');
+  return s||k;
 }
 function findAnswer(input,th){
   const n=norm(input,th.extra);if(!n)return null;
   for(let i=0;i<th.answers.length;i++)if(th.answers[i].keys.includes(n))return i;
+  // 1) même prononciation (orthographe française ou créole différente)
+  const pn=phon(n);
+  const hits=th.answers.map((a,i)=>a.pkeys.includes(pn)?i:-1).filter(i=>i>=0);
+  if(hits.length===1&&pn.length>=3)return hits[0];
+  // 2) petites fautes de frappe, sur l'orthographe et sur la prononciation
   const tol=n.length>=10?2:n.length>=5?1:0;if(!tol)return null;
-  let best=null,bd=9;
-  th.answers.forEach((a,i)=>a.keys.forEach(k=>{if(k.length<5)return;const d=lev(n,k);if(d<=tol&&d<bd){bd=d;best=i;}}));
-  return best;
+  let best=null,bd=9,tie=false;
+  th.answers.forEach((a,i)=>{
+    let d=9;
+    a.keys.forEach(k=>{if(k.length>=5)d=Math.min(d,lev(n,k));});
+    if(pn.length>=6)a.pkeys.forEach(k=>{if(k.length>=6&&lev(pn,k)<=1)d=Math.min(d,1);});
+    if(d<=tol){if(d<bd){bd=d;best=i;tie=false;}else if(d===bd&&best!==i)tie=true;}
+  });
+  return tie?null:best;
 }
 
 /* ---------- Avatars : personnages des contes et légendes des Antilles ---------- */
@@ -1124,7 +1150,7 @@ function showRules(){
     </div><ul><li>Réponse classique : 1 point.</li><li>Réponse rare : 2 points.</li><li>Réponse très rare : 3 points.</li><li>Une réponse déjà trouvée ou absente de la liste ne rapporte rien et n'enlève aucun point.</li></ul></section>
   <section><span class="art">ARTICLE 3 BIS</span><h4>Les thèmes</h4><p>${activeThemes(null).length} thèmes, classés par territoire. Au moment de lancer une partie, le jeu tire au sort parmi les thèmes des territoires choisis et les thèmes communs.</p>
     ${[['AN','Communs aux Antilles et à la Guyane'],...TERRS].map(([k,n])=>{const list=activeThemes(null).filter(i=>THEMES[i].terr===k);return list.length?`<h5 class="tgh">${esc(n)} · ${list.length}</h5><div class="themes">${list.map(i=>`<span>${esc(THEMES[i].t)}</span>`).join('')}</div>`:'';}).join('')}</section>
-  <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Certaines graphies créoles courantes sont acceptées (par exemple Foyal, zandoli, konpè Lapen).</p></section>
+  <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Les orthographes qui se prononcent de la même façon sont acceptées, en français comme en créole : k ou c ou qu, w ou ou, é ou er, an ou en, lettres doublées, lettres muettes en fin de mot (par exemple Kolonbo pour Colombo, konpè Lapen pour Compère Lapin, chatwou pour chatrou, piman pour piment). Quand une réponse pourrait correspondre à deux réponses différentes de la liste, elle n'est pas comptée.</p></section>
   <section><span class="art">ARTICLE 5</span><h4>Jokers</h4><ul><li>+15 secondes : prolonge une manche de 15 secondes. Un seul par partie.</li><li>Indice : affiche les deux premières lettres et la longueur d'une réponse non trouvée. Deux par partie.</li></ul></section>
   <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Appui long sur une partie dans « Mes parties » pour la supprimer. Une partie terminée est seulement retirée de ta liste (tes points sont conservés). Si la partie est en cours, tu l'abandonnes : tes manches sont retirées et les autres joueurs continuent sans toi. Si un seul joueur reste, il termine seul.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
   <section><span class="art">ARTICLE 7</span><h4>Fin de partie et égalité</h4><p>Les joueurs sont classés selon leur total de points à l'issue des ${ROUNDS} manches. En cas d'égalité de points, le joueur qui a trouvé le plus de réponses passe devant. Si l'égalité persiste, les joueurs partagent la même place. Bonus de classement : ${XP_WIN} points pour le vainqueur, ${XP_TIE} points en cas de première place partagée, ${XP_PLAY} points pour les autres participants.</p></section>
