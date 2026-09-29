@@ -470,3 +470,28 @@ addAlias("Mots créoles de la cuisine","Lanmori",["morue","lamori"]);
 addAlias("Mots créoles de la nature","Lanmè",["la mer","lanme","lanmé"]);
 addAlias("Mots créoles de la nature","Solèy",["soleil","soley","soléy"]);
 addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
+
+/* ---- Relecture lot 1 (29/09/2026, croisée avec Wikipédia, CMT, INAO, Parc national de la Guadeloupe) ---- */
+(function(){
+ const IL="Îles des Caraïbes",MC="Mots créoles du quotidien (en créole)",SI="Sites incontournables de Martinique",AR="Artistes de musique antillaise",FR="Fruits qu'on trouve aux Antilles",AN="Animaux de Martinique";
+ addAlias(IL,"Porto Rico",["puerto rico","borinquen","boriken"]);
+ addAlias(IL,"Îles Vierges",["iles vierges britanniques","iles vierges americaines","virgin islands"]);
+ addAlias(IL,"Saint-Eustache",["sint eustatius"]);
+ addAlias(IL,"Union",["union island","ile union"]);
+ addAns(IL,["*Hispaniola|republique dominicaine,saint domingue","**Petite Martinique","**Canouan","**Mayreau","**Tobago Cays","**Culebra"]);
+ fixAns(MC,"*Fwè|fwe","*Frè|fre,fwè,fwe");
+ fixAns(MC,"Chyen|chien","Chyen|chen");
+ addAlias(MC,"Tjenbé rèd",["tchimbe red","tchenbe red"]);
+ addAlias(MC,"Pyé-bwa",["pyebwa"]);
+ addAns(MC,["Moun","*Rivé|rive","*Soti","*Kouri","*Anpil","*Fè|fe"]);
+ fixAns(SI,"**Fond Saint-Jacques","**Fonds Saint-Jacques|fond saint jacques,habitation fonds saint jacques,domaine de fonds saint jacques");
+ fixAns(SI,"*Musée Paul Gauguin|gauguin","*Centre Paul Gauguin|gauguin,musee paul gauguin,musee gauguin,centre d interpretation paul gauguin");
+ addAlias(SI,"Gorges de la Falaise",["gorges de la riviere falaise","cascade de la riviere falaise"]);
+ addAns(SI,["**Cascade Didier|didier","*Anse Couleuvre|couleuvre"]);
+ addAns(AR,["**Pierre-Édouard Décimus|decimus,pierre edouard decimus","**Jean-Claude Naimro|naimro","*Christiane Obydol|obydol,chris obydol"]);
+ addAlias(FR,"Pois doux",["pwa dous","inga"]);
+ addAlias(FR,"Cerise pays",["cerise de barbade"]);
+ addAns(FR,["Pastèque|melon d eau,melon dlo","*Litchi|letchi","**Mangoustan","**Grenade","**Cacao|cabosse,kako"]);
+ addAlias(AN,"Pipiri",["pipirit"]);
+ addAlias(AN,"Mabouya",["mabouia"]);
+})();
