@@ -495,3 +495,23 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
  addAlias(AN,"Pipiri",["pipirit"]);
  addAlias(AN,"Mabouya",["mabouia"]);
 })();
+
+/* ---- Relecture lot 2 (29/09/2026) ---- */
+(function(){
+ const del=(title,name)=>{const t=THEMES.find(x=>x.t===title);if(t)t.a=t.a.filter(s=>s.replace(/^\*+/,'').split('|')[0]!==name);};
+ const HI="Grandes figures de l'histoire martiniquaise",RE="Reptiles des Antilles et de Guyane",OI="Oiseaux des Antilles",OM="Oiseaux marins des Antilles",PO="Poissons pélagiques des Antilles",PL="Plats créoles",EP="Épices et aromates de la cuisine créole";
+ del(HI,"Wendie Renard");del(HI,"Ronald Pognon"); // sportifs : déjà dans « Sportifs nés aux Antilles et en Guyane »
+ addAlias(HI,"Joséphine de Beauharnais",["tascher de la pagerie","josephine de la pagerie"]);
+ addAns(HI,["*René Maran|maran","**Georges Gratiant","**Hippolyte Morestin|morestin","**Jules Monnerot|monnerot"]);
+ addAlias(RE,"Tortue charbonnière",["molokoi","tortue charbonniere a pattes rouges"]);
+ addAlias(RE,"Mabouya",["gecko","margouillat","scinque mabouya"]);
+ addAns(RE,["**Tortue denticulée|tortue denticulee,denticulee"]);
+ addAlias(OI,"Pipiri",["pipirit","pipirite","tyran gris"]);
+ addAlias(OI,"Perdrix",["colin de virginie"]);
+ addAlias(OI,"Colibri madère",["colibri falle rouge","fal wouj","kolibri fal wouj"]);
+ addAlias(OM,"Paille-en-queue",["phaethon","paille en queue"]);
+ del(PO,"Listao");addAlias(PO,"Bonite",["listao","thon listao","bonite a ventre raye"]);
+ addAlias(PL,"Souskaï",["souskay"]);
+ fixAns(EP,"*Chadron béni|chadron beni,coriandre","*Chadron béni|chadron beni,chadon beni,chardon beni,chadon,fitoula,coulante");
+ addAlias(EP,"Bonda Man Jacques",["bondamanjak","bonda man jak"]);
+})();
