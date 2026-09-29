@@ -360,3 +360,23 @@ addAns("Espèces endémiques des Antilles",["**Dynaste de Martinique|dynaste,sci
 
 fixAns("Mornes, pitons et montagnes de Martinique","*Piton Lacroix|lacroix","*Piton Lacroix|lacroix,morne pavillon");
 addAns("Mornes, pitons et montagnes de Martinique",["*Morne Piquet|piquet"]);
+
+/* ---------- Vérification Guadeloupe, Guyane, Saint-Martin, Saint-Barthélemy (28/09/2026) ---------- */
+fixAns("Les communes de Guyane","Rémire-Montjoly|remire,montjoly","Remire-Montjoly|remire,montjoly,remire montjoly");
+fixAns("Les communes de Guyane","*Papaïchton|papaichton","*Papaichton|papaichton");
+
+fixAns("Sites et monuments de Guadeloupe","*Habitation Murat|murat","*Habitation Murat|murat,moulin murat");
+fixAns("Sites et monuments de Guadeloupe","**Cathédrale de Basse-Terre|notre dame de guadeloupe","**Cathédrale de Basse-Terre|notre dame de guadeloupe,cathedrale notre dame de guadeloupe");
+addAns("Sites et monuments de Guadeloupe",["*Réserve Cousteau|cousteau,ilets pigeon","*Parc national de la Guadeloupe|parc national","*Fort Louis|fort l union","*Tour du Père-Labat|pere labat","*Habitation La Grivelière|griveliere","*Maison natale de Saint-John Perse|maison saint john perse",
+ "**Gueule Grand Gouffre|grand gouffre","**Moulin Bézard|bezard","**Usine Darboussier|darboussier","**Cinéma Renaissance|renaissance","**Habitation La Joséphine|la josephine","**Redoute d'Arbaud|arbaud","**Parc des roches gravées|roches gravees"]);
+
+addAns("Plages de Guadeloupe",["*Anse à la Gourde|gourde","*Plage du Souffleur|souffleur","*La Perle|plage de la perle","*Pain de Sucre|pain de sucre","*Salako","*Anse Champagne|champagne","**Folle Anse","**Anse des Rochers|anse rochers"]);
+
+addAns("Rivières de Guadeloupe",["*Rivière du Plessis|plessis","*Rivière du Pérou|perou","*Rivière du Petit Carbet|petit carbet","**Rivière Grande Plaine|grande plaine","**Canal des Rotours|rotours","**Rivière du Lamentin|riviere lamentin"]);
+
+addAns("Sites et monuments de Guyane",["*Cathédrale Saint-Sauveur|saint sauveur","*Place des Amandiers|amandiers","*Maison natale de Félix Éboué|felix eboue","*Jardin botanique de Cayenne|jardin botanique","*Salines de Montjoly|salines","*Zoo de Guyane|zoo",
+ "**Îlet la Mère|ilet la mere","**Fort Diamant|diamant","**Habitation Loyola|loyola","**Fort Trio|trio","**Léproserie de l'Acarouany|acarouany"]);
+
+addAns("Plages de Saint-Martin",["*Great Bay|grande baie","*Little Bay","*Tintamarre","*Oyster Bay|oyster pond","*Galisbay|galis bay","**Petite Plage","**Cole Bay","**Baie de l'Embouchure|coconut grove,embouchure","**Baie Blanche"]);
+
+addAns("Plages de Saint-Barthélemy",["*Public|plage de public","**Petite Anse|anse de la petite anse"]);
