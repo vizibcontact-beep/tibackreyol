@@ -131,16 +131,17 @@ function go(t){
 byId('mepill').onclick=()=>go('compte');
 
 /* ---------- Moteur d'une manche ---------- */
-function playRound({who,label,th,dur,jokers,score,onFinish}){
+function playRound({who,label,th,dur,jokers,score,onFinish,last}){
   cleanup();PLAYING=true;
   const found=[],rejects=[],rejKeys=new Set();let end=Date.now()+dur*1000,total=dur,hints=[],pts=0,done=false;
+  let combo=0,maxCombo=0,lastSec=null,recorded=false;const prevBest=bestFor(th.idx);
   $app.innerHTML=`
   <div class="hud">
     <div class="who">${esc(who)}<small>${esc(label)}</small></div>
     <div class="timer" id="timer"><svg viewBox="0 0 78 78"><circle cx="39" cy="39" r="33" fill="none" stroke="var(--card)" stroke-width="7"/><circle id="arc" cx="39" cy="39" r="33" fill="none" stroke="var(--gold)" stroke-width="7" stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="0"/></svg><div class="t" id="tt">${dur}</div></div>
     <div class="score"><span id="sc">${score}</span><small>points</small></div>
   </div>
-  <div class="theme-card"><h3 style="color:var(--gold)">Thème</h3><h2>${esc(th.title)}</h2><p class="count"><span id="nf">0</span> / ${th.answers.length} trouvées</p></div>
+  <div class="theme-card"><div class="combo" id="combo" aria-live="polite"></div><h3 style="color:var(--gold)">${last?'Dernière manche · ':''}Thème</h3><h2>${esc(th.title)}</h2><p class="count"><span id="nf">0</span> / ${th.answers.length} trouvées</p></div>
   <form class="entry" id="f" autocomplete="off"><input type="text" id="in" placeholder="Tape une réponse…" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send"><button class="btn" type="submit">OK</button></form>
   <div class="feedback" id="fb" aria-live="polite"></div>
   <div class="jokers">
@@ -161,10 +162,12 @@ function playRound({who,label,th,dur,jokers,score,onFinish}){
   byId('f').onsubmit=e=>{
     e.preventDefault();const v=$in.value.trim();if(!v||done)return;
     const i=findAnswer(v,th);
-    if(i===null){SFX.bad();const rk=norm(v,th.extra);if(rk&&!rejKeys.has(rk)){rejKeys.add(rk);rejects.push(v.slice(0,40));}say(`« ${v} » : pas dans la liste`,'bad');$in.classList.remove('shake');void $in.offsetWidth;$in.classList.add('shake');}
+    if(i===null){if(combo>=3)SFX.breakStreak();else SFX.bad();combo=0;showCombo();const rk=norm(v,th.extra);if(rk&&!rejKeys.has(rk)){rejKeys.add(rk);rejects.push(v.slice(0,40));}say(`« ${v} » : pas dans la liste`,'bad');$in.classList.remove('shake');void $in.offsetWidth;$in.classList.add('shake');}
     else if(found.includes(i)){SFX.dup();say(`${th.answers[i].name} : déjà trouvé`,'dup');}
-    else{found.push(i);const a=th.answers[i];pts+=a.pts;SFX.good(a.pts);
+    else{found.push(i);const a=th.answers[i];pts+=a.pts;combo++;maxCombo=Math.max(maxCombo,combo);
+      SFX.good(a.pts,combo);showCombo();
       say(`${a.name} ! +${a.pts}${a.pts===3?' · très rare':a.pts===2?' · rare':''}`,'ok');render();
+      if(!recorded&&prevBest>=3&&found.length===prevBest+1){recorded=true;setTimeout(()=>{if(!done){SFX.record();flashCombo('🏆 Nouveau record !','rec');}},450);}
       if(found.length===th.answers.length)finish();}
     $in.value='';$in.focus();
   };
@@ -173,12 +176,19 @@ function playRound({who,label,th,dur,jokers,score,onFinish}){
     if(!jokers.hint||done)return;const left=th.answers.map((a,i)=>i).filter(i=>!found.includes(i)&&!hints.includes(i));if(!left.length)return;
     jokers.hint--;hints.push(left[Math.floor(Math.random()*left.length)]);this.querySelector('small').textContent=`(${jokers.hint})`;if(!jokers.hint)this.disabled=true;render();$in.focus();};
   byId('jstop').onclick=()=>finish();
-  function finish(){if(done)return;done=true;PLAYING=false;clearInterval(tick);tick=null;SFX.end();onFinish(found.slice(),pts,rejects.slice());}
+  function showCombo(){const el=byId('combo');if(!el)return;
+    if(combo>=5){el.textContent=`🔥 COMBO x${combo} !`;el.className='combo on'+(combo>=8?' hot':'');void el.offsetWidth;el.classList.add('bump');}
+    else if(!el.classList.contains('rec')){el.textContent='';el.className='combo';}}
+  function flashCombo(txt,cls){const el=byId('combo');if(!el)return;el.textContent=txt;el.className='combo on '+cls;
+    setTimeout(()=>{if(el.classList.contains(cls)){el.className='combo';showCombo();}},2200);}
+  function finish(){if(done)return;done=true;PLAYING=false;clearInterval(tick);tick=null;SFX.end();saveBest(th.idx,found.length);onFinish(found.slice(),pts,rejects.slice());}
+  if(last)SFX.suspense();
   const $tt=byId('tt'),$arc=byId('arc'),$timer=byId('timer');
   tick=setInterval(()=>{
     const left=Math.max(0,(end-Date.now())/1000);
     $tt.textContent=Math.ceil(left);$arc.setAttribute('stroke-dashoffset',207.3*(1-left/total));
     $timer.classList.toggle('low',left<=10);$arc.setAttribute('stroke',left<=10?'var(--red)':'var(--gold)');
+    const sec=Math.ceil(left);if(sec!==lastSec){lastSec=sec;if(sec>0&&sec<=(last?10:5))SFX.tick(sec,last);}
     if(left<=0)finish();
   },200);
   render();
@@ -229,7 +239,7 @@ function showSetup(){
   ${installPanel()}`;
   const paintThemes=()=>{const act=activeThemes(settings.terr);byId('tcount').textContent=`${act.length} thèmes : ceux des territoires choisis, plus les thèmes communs aux Antilles et à la Guyane.`;};
   paintThemes();bindTerr(paintThemes);
-  byId('snd').onclick=function(){settings.sound=!settings.sound;saveSettings();this.textContent=settings.sound?'Sons : activés':'Sons : coupés';if(settings.sound)SFX.good(1);};
+  byId('snd').onclick=function(){settings.sound=!settings.sound;saveSettings();this.textContent=settings.sound?'Sons : activés':'Sons : coupés';if(settings.sound)SFX.good(1,3);};
   const readNames=()=>{settings.names[0]=(byId('n0').value.trim()||'Joueur 1');const n1=byId('n1');if(n1)settings.names[1]=n1.value.trim()||'Joueur 2';};
   byId('c1').onclick=()=>{readNames();settings.count=1;saveSettings();showSetup();};
   byId('c2').onclick=()=>{readNames();settings.count=2;saveSettings();showSetup();};
@@ -253,7 +263,7 @@ function localIntro(){
     <button class="btn wide" id="ready" type="button">Je suis prêt·e, go !</button>
   </section>
   <div class="scoreline">${G.players.map(q=>`<div class="sc"><span class="n">${esc(q.name)}</span><span class="v">${q.score}</span><span class="d">points</span></div>`).join('')}</div>`;
-  byId('ready').onclick=()=>playRound({who:p.name,label:`Manche ${G.round+1}/${ROUNDS}`,th,dur:G.dur,jokers:p.jokers,score:p.score,
+  byId('ready').onclick=()=>playRound({who:p.name,label:`Manche ${G.round+1}/${ROUNDS}`,th,dur:G.dur,last:G.round===ROUNDS-1,jokers:p.jokers,score:p.score,
     onFinish:(found,pts,rej)=>{G.found[G.round][G.turn]=found;G.rej[G.round][G.turn]=rej;G.roundPts[G.round][G.turn]=pts;p.score+=pts;p.count+=found.length;
       if(G.turn<G.players.length-1){G.turn++;localIntro();}else localRoundResult();}});
 }
@@ -926,7 +936,7 @@ async function playOnline(code,M,mine,r){
   rounds[r]={found:[],pts:0,done:false};
   try{await savePlay(code,rounds,jokers);}catch(e){$app.innerHTML=`<section class="panel"><p class="bad">${esc(dbMsg(e))}</p></section>`;return;}
   const th=prep(M.themes[r]),base=sumPts({rounds:mine.rounds});
-  playRound({who:myPseudo(),label:`Manche ${r+1}/${ROUNDS} · en ligne`,th,dur:M.dur,jokers,score:base,
+  playRound({who:myPseudo(),label:`Manche ${r+1}/${ROUNDS} · en ligne`,th,dur:M.dur,last:r===ROUNDS-1,jokers,score:base,
     onFinish:async(found,pts,rej)=>{
       rounds[r]={found,pts,done:true};
       $app.innerHTML=`<section class="panel center pass"><h3>Manche ${r+1} terminée</h3><p class="big">+${pts}</p><p class="muted">Enregistrement…</p></section>`;
@@ -1115,14 +1125,33 @@ function ac(){if(!settings.sound)return null;try{if(!AC)AC=new (window.AudioCont
 function tone(freq,start,dur,type,vol){const c=ac();if(!c)return;try{const o=c.createOscillator(),g=c.createGain(),t0=c.currentTime+start;
   o.type=type||'sine';o.frequency.setValueAtTime(freq,t0);g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol||0.14,t0+0.015);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
   o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+dur+0.05);}catch(e){}}
+/* Gamme pentatonique : chaque combo démarre plus haut, la mélodie monte. */
+const SCALE=[523,587,659,784,880,1047,1175,1319,1568,1760,2093,2349];
+function sparkle(start){[2637,3136,3520,4186].forEach((f,i)=>tone(f,start+i*0.035,0.12,'sine',0.045));}
 const SFX={
-  good(p){const n=[659,880,1175].slice(0,Math.max(2,p||1));n.forEach((f,i)=>tone(f,i*0.07,0.16,'triangle',0.13));},
-  bad(){tone(196,0,0.18,'square',0.05);tone(147,0.09,0.2,'square',0.05);},
+  good(p,c){c=c||1;p=p||1;const n=Math.min(c,5),base=Math.min(c-1,SCALE.length-n);
+    for(let k=0;k<n;k++)tone(SCALE[base+k],k*0.065,0.16,'triangle',0.12);
+    let t=n*0.065;
+    if(p>=2){tone(SCALE[Math.min(base+n+1,SCALE.length-1)]*2,t,0.2,'sine',0.07);t+=0.06;}
+    if(p>=3){[1568,1976,2349].forEach(f=>tone(f,t,0.35,'sine',0.05));t+=0.05;}
+    if(c>=5)sparkle(t+0.03);},
+  bad(){const c=ac();if(!c)return;try{const o=c.createOscillator(),g=c.createGain(),t0=c.currentTime;
+    o.type='sine';o.frequency.setValueAtTime(150,t0);o.frequency.exponentialRampToValueAtTime(75,t0+0.16);
+    g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(0.22,t0+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t0+0.2);
+    o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+0.25);}catch(e){}},
+  breakStreak(){[784,659,523,392].forEach((f,i)=>tone(f,i*0.07,0.14,'triangle',0.08));setTimeout(()=>SFX.bad(),300);},
   dup(){tone(440,0,0.1,'sine',0.08);tone(440,0.13,0.1,'sine',0.08);},
+  tick(sec,last){const f=last?(sec<=3?1320:990):880;tone(f,0,0.06,'square',last?0.05:0.03);},
+  suspense(){for(let k=0;k<14;k++)tone(98+k*4,k*0.06,0.08,'triangle',0.03+k*0.006);tone(196,0.9,0.4,'triangle',0.12);tone(294,0.9,0.4,'sine',0.08);},
+  record(){[784,988,1175,1568].forEach((f,i)=>tone(f,i*0.1,0.2,'triangle',0.13));[1568,1976,2349].forEach(f=>tone(f,0.42,0.6,'sine',0.06));sparkle(0.5);},
   end(){[523,659,784].forEach((f,i)=>tone(f,i*0.12,0.25,'triangle',0.12));},
   win(){[523,659,784,1047,784,1047].forEach((f,i)=>tone(f,i*0.11,i===5?0.5:0.18,'triangle',0.14));},
   lose(){[392,349,330,262].forEach((f,i)=>tone(f,i*0.16,0.28,'sine',0.1));}
 };
+/* Meilleur nombre de réponses par thème (compte en ligne + ce téléphone) */
+function localBest(){try{return JSON.parse(localStorage.getItem('tibac_best')||'{}')||{};}catch(e){return {};}}
+function bestFor(t){const a=(typeof MEP!=='undefined'&&MEP&&MEP.best&&MEP.best[t])||0;return Math.max(a,localBest()[t]||0);}
+function saveBest(t,n){try{const b=localBest();if(n>(b[t]||0)){b[t]=n;localStorage.setItem('tibac_best',JSON.stringify(b));}}catch(e){}}
 function confetti(){
   if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const cv=document.createElement('canvas');cv.className='confetti';document.body.appendChild(cv);

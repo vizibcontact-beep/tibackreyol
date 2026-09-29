@@ -196,3 +196,12 @@ button.mitem.pressing{transform:scale(.97);border-color:var(--red)}
 .sheet{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:18px;width:100%;max-width:520px;display:flex;flex-direction:column;gap:12px;animation:pop .2s ease-out}
 .btn.red{background:var(--red);color:#fff;box-shadow:0 4px 0 #A42C22}
 .btn.red:active{box-shadow:0 1px 0 #A42C22}
+
+.combo{min-height:0;font-family:var(--display);font-weight:800;font-size:20px;color:var(--gold);text-align:center;transition:opacity .2s}
+.combo:empty{display:none}
+.combo.on{animation:pop .25s ease-out}
+.combo.bump{animation:comboBump .35s ease-out}
+.combo.hot{color:#FF9F43;text-shadow:0 0 12px rgba(255,159,67,.6)}
+.combo.rec{color:#7FE0B0}
+@keyframes comboBump{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.combo.on,.combo.bump{animation:none}}
