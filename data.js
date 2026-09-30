@@ -623,3 +623,30 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
     "Depuis 2019, 107 plantes exotiques envahissantes sont réglementées en Martinique : il est interdit de les vendre, de les transporter ou de les relâcher dans la nature.",
     "La mangouste, introduite en 1889 pour lutter contre les rats, a causé la disparition de plusieurs reptiles de Martinique."]);
 })();
+
+/* ---- Espèces disparues et menacées de Martinique (Liste rouge UICN faune de Martinique, avril 2020 ; pages Faune de la DEAL) ---- */
+(function(){
+ const A=(title,list)=>{const i=THEMES.findIndex(x=>x.t===title);if(i>=0)ANEC[i]=[...(ANEC[i]||[]),...list];};
+ A("Animaux de Martinique",["L'agouti vivait autrefois en Martinique, mais il en a disparu : la Liste rouge de 2020 le classe « disparu au niveau régional »."]);
+ T('MQ',"Espèces disparues de Martinique",["Agouti|zagouti","Lamantin|lamantin des caraibes","*Rat pilori|rat musque de la martinique,pilori","*Amazone de la Martinique|perroquet de la martinique,amazone",
+   "*Phoque moine des Caraïbes|phoque moine,phoque","*Leptodactyle des Antilles|leptodactyle","**Ara de Guadeloupe|ara","**Holotropide de l'Herminier|holotropide",
+   "**Scinque métallique|scinque metallique","**Courlis esquimau|courlis esquimau","**Troglodyte familier|troglodyte","**Cyclophore cendré|cyclophore","**Flambeau nacré|flambeau nacre"],
+  ["L'agouti vivait autrefois en Martinique, mais il en a disparu : la Liste rouge de 2020 le classe « disparu au niveau régional ».",
+   "L'amazone de la Martinique, un perroquet qui ne vivait que sur l'île, est aujourd'hui éteinte.",
+   "Le lamantin des Caraïbes vivait autrefois dans les eaux de la Martinique, où il a disparu. La commune du Lamentin tiendrait son nom de ces animaux.",
+   "Le rat pilori, grand rongeur qui ne vivait qu'en Martinique, a disparu après l'éruption de la montagne Pelée en 1902.",
+   "Le phoque moine des Caraïbes, le seul phoque de la région, est aujourd'hui éteint.",
+   "La mangouste, introduite en 1889, est l'une des principales causes de la disparition de plusieurs reptiles de Martinique."]);
+ T('MQ',"Espèces menacées en Martinique (Liste rouge)",["Trigonocéphale|trigonocephale,fer de lance,bothrops","Iguane péyi|iguane peyi,iguane des petites antilles","Tortue verte","Tortue luth|luth","Tortue imbriquée|tortue imbriquee,caret",
+   "Baleine à bosse|baleine","Cachalot","Carouge|oriole,oriole de la martinique","Moqueur gorge-blanche|moqueur a gorge blanche,gorge blanche","Matoutou falaise|matoutou","Paille-en-queue|phaeton,paille en queue","Anguille|anguille americaine",
+   "*Colibri à tête bleue|colibri tete bleue,tete bleue","*Trembleur|trembleur gris","*Sterne de Dougall|dougall","*Puffin d'Audubon|puffin","*Allobate|allobate de la martinique","*Couresse|couleuvre couresse",
+   "*Poisson gale","*Colombe à croissants|colombe a croissants,perdrix croissant","*Courlis corlieu|corlieu","*Pigeon à couronne blanche|pigeon a couronne blanche","*Scinque mabouya|scinque","*Pluvier de Wilson",
+   "**Huîtrier d'Amérique|huitrier","**Martin-pêcheur à ventre roux|martin pecheur a ventre roux","**Érismature routoutou|erismature,routoutou","**Talève violacée|taleve,poule sultane","**Petit blongios|blongios",
+   "**Foulque d'Amérique|foulque","**Petite sterne","**Sterne bridée|sterne bridee","**Engoulevent coré|engoulevent","**Pleurodonte déprimé|pleurodonte","**Crevette transparente","**Nymphale brun des mangroves|nymphale",
+   "**Pluvier bronzé|pluvier bronze","**Pluvier argenté|pluvier argente","**Bécasseau maubèche|becasseau maubeche"],
+  ["La Liste rouge classe les espèces de « préoccupation mineure » à « éteinte ». Les trois catégories des espèces menacées sont : vulnérable, en danger et en danger critique.",
+   "En Martinique, le moqueur gorge-blanche ne vit que sur la presqu'île de la Caravelle. Il est classé en danger critique.",
+   "Le trigonocéphale est classé en danger : ses effectifs baissent depuis les années 1970.",
+   "L'iguane péyi est en danger critique, menacé surtout par l'iguane rayé introduit, avec lequel il se croise.",
+   "La couleuvre couresse n'a plus été vue en Martinique depuis 1968, mais elle n'est pas encore déclarée éteinte."]);
+})();
