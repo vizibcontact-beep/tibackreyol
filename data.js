@@ -679,3 +679,42 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
    "Le tyranneau barbu, petit oiseau des savanes sèches, compte probablement moins de 150 individus en Guyane : il est en danger critique.",
    "La loutre géante du Brésil, classée en danger, souffre de la pollution des rivières par l'orpaillage."]);
 })();
+
+/* ---- Guadeloupe : Liste rouge faune de Guadeloupe (UICN, OFB, MNHN, décembre 2021) et Liste rouge flore vasculaire de Guadeloupe (UICN, MNHN, CBIG) ---- */
+(function(){
+ addAlias("Crustacés des Antilles","Ouassou",["vrai ouassou"]);
+ addAns("Crustacés des Antilles",["*Cacador","*Queue rouge","**Gros mordant","**Grand bras","**Grande chevrette"]);
+ const A=(title,list)=>{const i=THEMES.findIndex(x=>x.t===title);if(i>=0)ANEC[i]=[...(ANEC[i]||[]),...list];};
+ A("Crustacés des Antilles",["En Guadeloupe, les crevettes de rivière ont des noms bien à elles : vrai ouassou, cacador, queue rouge, gros mordant, grand bras ou petit-bouc."]);
+ T('GP',"Animaux de Guadeloupe",["Iguane|iguane des petites antilles,iguane peyi","Anolis|anoli,zandoli","Pic de Guadeloupe|tapeur,toto bwa,pic","Colibri|foufou","Sucrier|sikriye","Tourterelle","Crabe de terre|crabe",
+   "Tortue verte","Tortue luth|luth","Mangouste|mangous","Chauve-souris|chauve souris","Ouassou|vrai ouassou","Baleine à bosse|baleine","Pélican|pelican brun","Frégate|fregate",
+   "*Raton laveur|raton,racoon","*Agouti","*Grive à pieds jaunes|grive","*Moqueur","*Trembleur brun|trembleur","*Colibri madère|madere","*Colibri huppé|huppe","*Tortue imbriquée|tortue imbriquee",
+   "*Tortue charbonnière|tortue charbonniere,molokoy","*Cacador","*Colle-roche|colle roche","*Anguille","*Hylode|eleutherodactyle","*Couresse|couleuvre","*Paille-en-queue|phaeton,paille en queue","*Cachalot","*Dauphin",
+   "**Sérotine de Guadeloupe|serotine","**Scinque|scinque guadeloupeen","**Sphérodactyle|spherodactyle","**Queue rouge","**Gros mordant","**Ti-neg|ti neg","**Crocro","**Poisson-tétard|poisson tetard","**Tyran janeau|janeau","**Paruline caféiette|caféiette,cafeiette"],
+  ["Le pic de Guadeloupe, appelé tapeur, ne vit nulle part ailleurs au monde.",
+   "La sérotine de Guadeloupe, une chauve-souris qui ne vit qu'en Guadeloupe, est classée en danger critique.",
+   "En Guadeloupe, les crevettes de rivière ont des noms bien à elles : vrai ouassou, cacador, queue rouge, gros mordant, grand bras ou petit-bouc."]);
+ T('GP',"Espèces disparues de Guadeloupe",["Lamantin|lamantin des caraibes","*Perroquet de Guadeloupe|amazone de guadeloupe","*Ara de Guadeloupe|ara","*Perruche de Guadeloupe|perrique de guadeloupe,perruche",
+   "*Phoque moine des Caraïbes|phoque moine,phoque","*Flamant des Caraïbes|flamant,flamant rose","**Courlis esquimau","**Troglodyte familier|troglodyte","**Chouette des terriers|chouette",
+   "**Holotropide roquet|holotropide","**Ameive de Guadeloupe|ameive","**Grand ameive","**Ameive de Marie-Galante","**Cyclostome de Guadeloupe|cyclostome"],
+  ["Trois perroquets vivaient autrefois en Guadeloupe : le perroquet, la perruche et l'ara de Guadeloupe. Tous sont aujourd'hui éteints.",
+   "Le flamant des Caraïbes nichait autrefois en Guadeloupe. Il en a disparu, comme le lamantin et le phoque moine.",
+   "Trois espèces d'ameives, grands lézards qui ne vivaient qu'en Guadeloupe et à Marie-Galante, sont éteintes."]);
+ T('GP',"Espèces menacées en Guadeloupe (Liste rouge)",["Iguane des Petites Antilles|iguane peyi,iguane","Tortue verte","Tortue luth|luth","Anguille|anguille americaine","Vrai ouassou|ouassou","Cachalot","Pélican brun|pelican",
+   "Paille-en-queue|phaeton,phaeton a bec rouge,phaeton a bec jaune,paille en queue","Sterne de Dougall|dougall","*Sérotine de Guadeloupe|serotine","*Couleuvre des Antilles|couleuvre,couresse","*Grive à pieds jaunes|grive","*Tyran janeau|janeau",
+   "*Petit-bouc|petit bouc","*Grande chevrette","*Crevette transparente","*Poisson-tétard|poisson tetard","*Pétrel diablotin|diablotin","*Pigeon à couronne blanche","*Fou à pieds rouges","*Grande aigrette|aigrette",
+   "*Petite sterne","*Noddi brun|noddi","**Chiroderme de Guadeloupe|chiroderme","**Sturnire de Guadeloupe|sturnire","**Couleuvre de Julia","**Couleuvre des Saintes","**Scinque de Marie-Galante",
+   "**Scinque guadeloupéen|scinque guadeloupeen","**Sphérodactyle des Saintes","**Éleuthérodactyle de Barlagne|barlagne","**Éleuthérodactyle de Pinchon|pinchon","**Dendrocygne des Antilles|dendrocygne",
+   "**Martin-pêcheur à ventre roux","**Organiste louis-d'or|organiste","**Canard des Bahamas","**Érismature routoutou|erismature,routoutou","**Pluvier de Wilson","**Huîtrier d'Amérique|huitrier",
+   "**Échasse d'Amérique|echasse","**Talève violacée|taleve,poule sultane","**Râle tapageur|rale"],
+  ["La Liste rouge de 2021 classe l'iguane des Petites Antilles, la sérotine de Guadeloupe et la couleuvre des Antilles en danger critique.",
+   "L'éleuthérodactyle de Barlagne, une petite grenouille qui ne vit qu'en Guadeloupe, est classée en danger."]);
+ T('GP',"Plantes menacées de Guadeloupe",["Courbaril","Gaïac|gaiac","Tête à l'Anglais|tete a l anglais,tete a langlais","Bois de Rhodes|bois de rose,bois chypre","Crécré montagne|crecre montagne,crecre","Zikak|icaque",
+   "*Dendé|dende,glouglou","*Coco macaque|ailes a ravet","*Mapou lélé|mapou lele","*Bois gligli","*Prune épine|prune epine","*Romarin bord-de-mer|romarin bord de mer","*Belle de nuit","*Houx pays|bois de houx",
+   "*Igname bâtard|igname batard,igname porte en l air","*Grande camomille","*Liane mangle","*Kanikrok","*Corossol chien|corossol diable","**Bwa mèl|bwa mel,bois mele","**Bois oursin","**Liane sirop|fuchsia bois",
+   "**Canique jaune","**Tabac du diable|amourette blanche","**Arbre à la glu|arbre a la colle,arbre a raisins","**Bois baguette|bwa kafe","**Bois couronne","**Bois doux violon","**Bois fricassé|bois fricasse",
+   "**Brésillette|bresillette","**Caconnier blanc|bois gamelle","**Corde de violon|liane corde","**Laurier caillé|laurier caille","**Laurier fine","**Lis jaune des hauts","**Maho ma","**Plantain d'eau","**Prunier des bois"],
+  ["Sur les 1 706 plantes évaluées par la Liste rouge de Guadeloupe, 256 sont menacées et 5 ont disparu de l'archipel.",
+   "Le « tête à l'Anglais », petit cactus rond des côtes sèches, est classé en danger critique en Guadeloupe.",
+   "Le gaïac, arbre au bois très dur et très lourd, est classé en danger en Guadeloupe."]);
+})();

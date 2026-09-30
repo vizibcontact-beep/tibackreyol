@@ -1,5 +1,5 @@
 // Ti Bac Kréyol — service worker : ouverture rapide et jeu solo hors connexion
-const VERSION='tibac-v15';
+const VERSION='tibac-v16';
 const SHELL=[
  "./",
  "index.html",
