@@ -718,3 +718,8 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
    "Le « tête à l'Anglais », petit cactus rond des côtes sèches, est classé en danger critique en Guadeloupe.",
    "Le gaïac, arbre au bois très dur et très lourd, est classé en danger en Guadeloupe."]);
 })();
+(()=>{ // décisions de Maureen (30/09/2026)
+ const del=(title,name)=>{const t=THEMES.find(x=>x.t===title);if(t)t.a=t.a.filter(s=>s.replace(/^\*+/,'').split('|')[0]!==name);};
+ del("Marques de rhum de Martinique","Simon");
+ del("Boissons et cocktails antillais","Didiko");
+})();
