@@ -1,12 +1,20 @@
 'use strict';
 
 /* ---------- Normalisation & correspondance ---------- */
-const STOP=new Set(['le','la','les','l','de','du','des','d','a','au','aux','en','et','the']);
-function norm(s,extra,keep){
-  s=String(s).toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-  return s.split(' ').filter(w=>w&&(!STOP.has(w)||(keep&&keep.has(w)))&&!(extra&&extra.has(w)))
-    .map(w=>w==='st'?'saint':w==='ste'?'sainte':w)
-    .map(w=>w.length>4&&w.endsWith('s')?w.slice(0,-1):w).join('');
+const STOP=new Set(['le','la','les','l','de','du','des','d','a','au','aux','en','et','the','di','o']); // di, o : « du », « aux » en créole
+/* Mots de lieux écrits en créole → forme française (Mòn Vè = Morne Vert, Lans Noire = Anse Noire…) */
+const WMAP={mon:'morne',morn:'morne',rivye:'riviere',rivie:'riviere',larivye:'riviere',larivie:'riviere',lans:'anse',lanse:'anse',
+  plaj:'plage',laplaj:'plage',kaskad:'cascade',pwent:'pointe',pwint:'pointe',zilet:'ilet',ilé:'ilet',ile:'ilet',sen:'saint',sent:'sainte',st:'saint',ste:'sainte',
+  so:'saut',kaskade:'cascade',chit:'chute',chout:'chute',pwant:'pointe',montany:'montagne',montay:'montagne',mòn:'morne',
+  abitasyon:'habitation',abitasion:'habitation',bitasyon:'habitation',katedral:'cathedrale',legliz:'eglise',liglis:'eglise',lopital:'hopital',gwo:'gros',gran:'grand',kaz:'case'};
+function norm(s,extra,keep,sp){
+  s=String(s).toLowerCase().replace(/œ/g,'oe').replace(/æ/g,'ae').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const ws=s.split(' ').map(w=>WMAP[w]||w);
+  // premier mot mal tapé mais proche d'un mot à ignorer du thème (« Ans Noire », « Bai du Robert »)
+  if(extra&&ws.length>1&&ws[0].length>=3&&!extra.has(ws[0])&&[...extra].some(x=>x.length>=4&&lev(ws[0],x)<=1))ws.shift();
+  return ws
+    .filter(w=>w&&(!STOP.has(w)||(keep&&keep.has(w)))&&!(extra&&extra.has(w)))
+    .map(w=>w.length>4&&w.endsWith('s')?w.slice(0,-1):w).join(sp?' ':'');
 }
 function lev(a,b){
   if(Math.abs(a.length-b.length)>2)return 9;
@@ -17,35 +25,43 @@ function lev(a,b){
 let PREP={},EXTRA={};
 function prep(i){
   if(PREP[i])return PREP[i];
-  const th=THEMES[i],extra=th.stop?new Set(th.stop):null,keep=th.keep?new Set(th.keep):null;
+  const th=THEMES[i],SYN={anse:['lans','lanse','ans'],baie:['be','bay','labe'],plage:['plaj','laplaj'],ilet:['zilet','ile']},extra=th.stop?new Set(th.stop.flatMap(x=>[x,...(SYN[x]||[])])):null,keep=th.keep?new Set(th.keep):null;
   const added=(EXTRA[i]||[]).map(x=>'*'.repeat(Math.max(0,Math.min(3,x.pts||1)-1))+x.name+((x.alias||[]).length?'|'+x.alias.join(','):''));
   return PREP[i]={idx:i,title:th.t,extra,keep,answers:[...th.a,...added].map(s=>{let pts=1;while(s[0]==='*'){pts++;s=s.slice(1);}
     const [name,al]=s.split('|');const keys=[name,...(al?al.split(','):[])].map(k=>norm(k,extra,keep)).filter(Boolean);
-    return {name,pts,keys:[...new Set(keys)],pkeys:[...new Set(keys.map(phon))]};})};
+    const fl=x=>String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9|]/g,'');
+    return {name,pts,keys:[...new Set(keys)],pkeys:[...new Set(keys.map(k=>phon(k)))],wkeys:[...new Set([name,...(al?al.split(','):[])].map(k=>phon(norm(k,extra,keep,1),1)).filter(Boolean))],flat:'|'+[name,...(al?al.split(','):[])].map(fl).join('|')+'|'};})};
 }
 /* Clé « sonore » : deux orthographes qui se prononcent pareil (français ou créole) donnent la même clé.
    Ex. : Compère / Konpè, Colombo / Kolonbo, chatrou / chatwou, manger / manjé, piment / piman. */
-function phon(k){
+function phon(k,multi){
   let s=' '+k+' ';
   s=s.replace(/tch/g,'tj').replace(/ch/g,'§').replace(/sh/g,'§').replace(/ph/g,'f').replace(/th/g,'t')
-   .replace(/qu/g,'k').replace(/ck/g,'k').replace(/c(?=[eiy])/g,'s').replace(/c/g,'k').replace(/x/g,'ks')
+   .replace(/qu/g,'k').replace(/ck/g,'k').replace(/c(?=[eiy])/g,'s').replace(/c/g,'k').replace(/(?<=[aeiou])x(?= )/g,'').replace(/x/g,'ks')
    .replace(/gu(?=[eiy])/g,'g').replace(/g(?=[eiy])/g,'j').replace(/h/g,'')
-   .replace(/eau/g,'o').replace(/au/g,'o').replace(/oi/g,'wa').replace(/ou/g,'w')
+   .replace(/eau/g,'o').replace(/au/g,'o').replace(/oi/g,'wa').replace(/ou/g,'w').replace(/eu/g,'e').replace(/ill/g,'y').replace(/u/g,'i')
    .replace(/r(?=[ow])/g,'w')
    .replace(/[ae]i(?=[^nm])/g,'e').replace(/y/g,'i')
    .replace(/m(?=[pb])/g,'n').replace(/(?:ain|ein|im(?=[^aeiouw])|in(?=[^aeiouw]))/g,'IN')
    .replace(/(?:an|en|am(?=[^aeiouw])|em(?=[^aeiouw]))(?=[^aeiouw])/g,'AN')
-   .replace(/z/g,'s').replace(/(er|ez|et|es|e|t|d)(?= )/g,'')
-   .replace(/(.)\1+/g,'$1').toLowerCase().replace(/\s+/g,'');
+   .replace(/z/g,'s').replace(/(.)\1+/g,'$1');
+  if(multi){s=s.replace(/was(?= )/g,'wa');for(let j=0;j<4;j++)s=s.replace(/(\S+?)(er|ez|et|es|e|t|d)(?= )/g,(m,a)=>a.length>=3?a:m);} // mot par mot : lettres muettes de fin (« tortue verte » = « torti vèt »)
+  else s=s.replace(/(er|ez|et|es|e|t|d)(?= )/g,'');
+  s=s.replace(/(.)\1+/g,'$1').toLowerCase().replace(/\s+/g,'');
   return s||k;
 }
 function findAnswer(input,th){
   const n=norm(input,th.extra,th.keep);if(!n)return null;
   for(let i=0;i<th.answers.length;i++)if(th.answers[i].keys.includes(n))return i;
+  // 0) une seule lettre de différence avec une seule réponse (« Sucier » → Sucrier)
+  if(n.length>=5){const h=th.answers.map((a,i)=>a.keys.some(k=>k.length>=5&&lev(n,k)<=1)?i:-1).filter(i=>i>=0);if(h.length===1)return h[0];}
   // 1) même prononciation (orthographe française ou créole différente)
   const pn=phon(n);
   const hits=th.answers.map((a,i)=>a.pkeys.includes(pn)?i:-1).filter(i=>i>=0);
   if(hits.length===1&&pn.length>=3)return hits[0];
+  // 1 bis) même prononciation, mot par mot (« torti vèt » = Tortue verte, « so babin » = Saut Babin)
+  const wn=phon(norm(input,th.extra,th.keep,1),1);
+  if(!hits.length&&wn.length>=3){const h=th.answers.map((a,i)=>a.wkeys.includes(wn)?i:-1).filter(i=>i>=0);if(h.length===1)return h[0];}
   // 2) petites fautes de frappe, sur l'orthographe et sur la prononciation
   const tol=n.length>=10?2:n.length>=5?1:0;if(!tol)return null;
   let best=null,bd=9,tie=false;
@@ -55,7 +71,11 @@ function findAnswer(input,th){
     if(pn.length>=6)a.pkeys.forEach(k=>{if(k.length>=6&&lev(pn,k)<=1)d=Math.min(d,1);});
     if(d<=tol){if(d<bd){bd=d;best=i;tie=false;}else if(d===bd&&best!==i)tie=true;}
   });
-  return tie?null:best;
+  if(best!==null&&!tie)return best;
+  // 3) mots collés ou séparés autrement (« AnseNoire », « Morne Rouge »)
+  const flat=x=>String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const fi=flat(input);if(fi.length>=6){const h=th.answers.map((a,i)=>a.flat&&a.flat.includes('|'+fi+'|')?i:-1).filter(i=>i>=0);if(h.length===1)return h[0];}
+  return null;
 }
 
 /* ---------- Avatars : personnages des contes et légendes des Antilles ---------- */
@@ -758,6 +778,13 @@ function showOnline(){
   const fr=friendsList();
   $app.innerHTML=`
   <section class="panel" id="invbox"><h3>Invitations reçues</h3><div class="plist" id="invs"></div></section>
+  <section class="panel" id="rndbox">
+    <h3>Adversaire au hasard</h3>
+    <p class="muted" style="font-size:14px">Affronte un joueur de ton niveau (<b>${esc(levelOf(MEP&&MEP.xp).name)}</b>), n'importe où dans le monde. Partie en différé : ${ROUNDS} manches de ${settings.dur} s sur les thèmes de tous les territoires.</p>
+    <button class="btn wide" id="rnd" type="button">🎲 Trouver un adversaire de mon niveau</button>
+    <p class="foot" id="rndinfo" style="text-align:left"></p>
+    <p class="bad" id="rerr" aria-live="polite"></p>
+  </section>
   <section class="panel">
     <h3>Créer une partie</h3>
     <div class="seg" role="group" aria-label="Mode"><button type="button" data-m="live" aria-pressed="true">En direct</button><button type="button" data-m="async" aria-pressed="false">En différé</button></div>
@@ -789,11 +816,23 @@ function showOnline(){
   $app.querySelectorAll('[data-od]').forEach(b=>b.onclick=()=>{dur=+b.dataset.od;$app.querySelectorAll('[data-od]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
   $app.querySelectorAll('[data-fi]').forEach(b=>b.onclick=()=>{const u=b.dataset.fi;if(picked.has(u))picked.delete(u);else{if(picked.size>=np-1){toast(`Partie à ${np} joueurs : ${np-1} invité${np>2?'s':''} maximum. Augmente le nombre de joueurs.`);return;}picked.add(u);}paintInv();});
   paintInv();bindTerr();
+  byId('rnd').onclick=async function(){this.disabled=true;byId('rerr').textContent='';
+    try{const code=await findRandom();if(code)openMatch(code);else this.disabled=false;}catch(e){byId('rerr').textContent=dbMsg(e);this.disabled=false;}};
+  SB.rpc('random_waiting').then(({data})=>{const el=byId('rndinfo');if(el&&typeof data==='number')el.textContent=data?`${data} joueur${data>1?'s attendent':' attend'} un adversaire en ce moment.`:'Personne n\'attend pour l\'instant : ta partie sera proposée au prochain joueur de ton niveau.';},()=>{});
   byId('create').onclick=async function(){this.disabled=true;try{const code=await createMatch(mode,dur,[...picked],np);openMatch(code);}catch(e){byId('cerr').textContent=dbMsg(e);this.disabled=false;}};
   byId('join').onclick=async function(){const code=byId('jc').value.trim().toUpperCase(),err=byId('jerr');
     if(code.length!==5){err.textContent='Le code fait 5 caractères.';return;}
     this.disabled=true;try{const r=await joinMatch(code);if(r)err.textContent=r;else openMatch(code);}catch(e){err.textContent=dbMsg(e);}this.disabled=false;};
   renderMatchList();
+}
+/* Adversaire au hasard : rejoint une partie en attente d'un joueur de niveau proche, sinon en crée une */
+async function findRandom(){
+  const all=TERRS.map(x=>x[0]);
+  const r=await q(SB.rpc('find_random_match',{p_pseudo:myPseudo(),p_avatar:myAvatar(),p_themes:pickThemes(all),p_dur:settings.dur,p_terr:all}));
+  if(!r||r.error){byId('rerr').textContent=(r&&r.error)||'Réessaie dans un instant.';return null;}
+  if(r.joined){notify({kind:'joined',code:r.code});toast(`Adversaire trouvé : ${r.opponent} (${levelOf(r.xp).name}) !`);}
+  else toast('Personne de ton niveau n\'attend pour l\'instant. Joue tes manches : le prochain joueur de ton niveau rejoindra ta partie.');
+  await loadMatches();renderTabs();return r.code;
 }
 async function createMatch(mode,dur,invites,maxp){
   invites=(invites||[]).filter(u=>u&&u!==UID);
@@ -823,6 +862,7 @@ function matchStatus(m){
   if(done){const r=rankList(ps.map(u=>({id:u,score:progOf(m,u).score,count:progOf(m,u).count||0})));const mine=r.find(x=>x.id===UID);const top=r.filter(x=>x.rank===1).length;
     return {k:'done',txt:mine.rank===1?(top>1?'Égalité en tête':'Gagnée'):`${mine.rank}${mine.rank===1?'re':'e'} place`};}
   if(!m.started&&m.mode==='live')return {k:'wait',txt:`Salle d'attente · ${ps.length}/${maxp}`};
+  if(m.random&&!m.started&&me.r>=ROUNDS)return {k:'wait',txt:'Recherche d\'un adversaire'};
   if(me.r>=ROUNDS)return {k:'wait',txt:m.started?'Les autres jouent encore':'Inscriptions ouvertes'};
   if(m.mode==='live'&&others.some(u=>progOf(m,u).r<me.r))return {k:'wait',txt:'Les autres terminent la manche'};
   return {k:'turn',txt:'À toi de jouer'};
@@ -835,11 +875,11 @@ function renderMatchList(){
     $app.querySelectorAll('[data-ir]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await q(SB.rpc('decline_invite',{p_code:b.dataset.ir}));await loadInvites();renderTabs();renderMatchList();}catch(e){b.disabled=false;}});}
   if(!MYMATCHES.length){el.innerHTML='<p class="empty">Aucune partie pour l\'instant. Crée-en une, défie tes amis ou rejoins une partie avec son code.</p>';return;}
   el.innerHTML=MYMATCHES.map(m=>{const others=(m.players||[]).filter(x=>x!==UID),st=matchStatus(m),a=progOf(m,UID);
-    const names=others.length?others.map(u=>(m.pseudos||{})[u]||'Joueur').join(', '):'personne pour l\'instant';
+    const names=others.length?others.map(u=>(m.pseudos||{})[u]||'Joueur').join(', '):m.random?'un adversaire au hasard (recherche en cours)':'personne pour l\'instant';
     const best=others.length?Math.max(...others.map(u=>progOf(m,u).score)):null;
     return `<button class="mitem" type="button" data-code="${esc(m.code)}"><span class="t1">avec ${esc(names)}<span class="badge b-${st.k}">${st.txt}</span></span>
     <span class="sc2">${a.score}${best!==null?`<small class="muted" style="display:block;font-size:11px">meilleur adv. ${best}</small>`:''}</span>
-    <span class="t2">${m.mode==='live'?'En direct':'En différé'} · ${(m.players||[]).length}/${m.max_players||2} joueurs${m.terr&&m.terr.length?' · '+esc(m.terr.map(x=>TERR_NAME[x]).join(', ')):''} · code ${esc(m.code)} · manche ${Math.min(a.r+1,ROUNDS)}/${ROUNDS}</span></button>`;}).join('');
+    <span class="t2">${m.random?'🎲 Au hasard · ':''}${m.mode==='live'?'En direct':'En différé'} · ${(m.players||[]).length}/${m.max_players||2} joueurs${m.terr&&m.terr.length?' · '+esc(m.terr.map(x=>TERR_NAME[x]).join(', ')):''} · code ${esc(m.code)} · manche ${Math.min(a.r+1,ROUNDS)}/${ROUNDS}</span></button>`;}).join('');
   el.querySelectorAll('[data-code]').forEach(b=>bindLongPress(b,()=>matchSheet(MYMATCHES.find(m=>m.code===b.dataset.code)),()=>openMatch(b.dataset.code)));
   const h=byId('mhint');if(h)h.hidden=false;
 }
@@ -911,20 +951,21 @@ function renderMatch(code,M,P){
       :`<p class="muted">En attente que ${esc(hostName)} lance la partie.</p>`}</section>`;
   }else if(myR>=ROUNDS){
     const left=others.filter(x=>x.r<ROUNDS);
-    action=`<section class="panel center"><h3>Tu as fini tes ${ROUNDS} manches</h3><p class="muted">${!M.started?`Les inscriptions sont encore ouvertes (${players.length}/${maxp}).`:`En attente de ${esc(left.map(x=>x.name).join(', '))}.`} Le classement final s'affichera ici automatiquement.</p></section>`;
+    action=`<section class="panel center"><h3>Tu as fini tes ${ROUNDS} manches</h3><p class="muted">${M.random&&!M.started?'On cherche un adversaire de ton niveau : il jouera les mêmes thèmes.':!M.started?`Les inscriptions sont encore ouvertes (${players.length}/${maxp}).`:`En attente de ${esc(left.map(x=>x.name).join(', '))}.`} Le classement final s'affichera ici automatiquement.</p></section>`;
   }else{
     const late=M.mode==='live'?others.filter(x=>x.r<myR):[];
     action=`<section class="panel center">${late.length?`<h3>Manche ${myR+1}</h3><p class="muted">${esc(late.map(x=>x.name).join(', '))} ${late.length>1?'terminent':'termine'} la manche ${myR}. La suivante s'ouvre dès que tout le monde a fini.</p>`
       :`<h3>Manche ${myR+1} sur ${ROUNDS}</h3><button class="btn wide" id="playnext" type="button">Jouer la manche ${myR+1}</button><p class="foot">Une manche commencée compte, même si tu quittes la page.</p>`}</section>`;
   }
-  const closeAsync=(!M.started&&M.mode==='async'&&isHost)?`<section class="panel"><h3>Inscriptions ouvertes · ${players.length}/${maxp}</h3><p class="muted" style="font-size:14px">Le classement final est calculé quand les inscriptions sont fermées et que chacun a joué ses ${ROUNDS} manches.</p><button class="btn ghost" id="startm" type="button" ${players.length<2?'disabled':''}>Fermer les inscriptions${players.length<2?' (2 joueurs minimum)':''}</button></section>`:'';
-  const invitePanel=(!M.started&&players.length<maxp)?`<section class="panel"><h3>Invite des joueurs · ${maxp-players.length} place${maxp-players.length>1?'s':''} libre${maxp-players.length>1?'s':''}</h3><div class="codebox"><b>${esc(code)}</b><button class="btn sm" id="copycode" type="button">Copier le code</button></div>
+  const randomPanel=(M.random&&!M.started)?`<section class="panel"><h3>🎲 Recherche d'un adversaire</h3><p class="muted" style="font-size:14px">Le prochain joueur de ton niveau (${esc(levelOf(MEP&&MEP.xp).name)}) qui cherche un adversaire rejoindra cette partie et jouera les mêmes thèmes. Tu peux jouer tes manches sans attendre${MYSUB?' : tu recevras une notification quand il arrive':''}.</p></section>`:'';
+  const closeAsync=(!M.started&&M.mode==='async'&&isHost&&!M.random)?`<section class="panel"><h3>Inscriptions ouvertes · ${players.length}/${maxp}</h3><p class="muted" style="font-size:14px">Le classement final est calculé quand les inscriptions sont fermées et que chacun a joué ses ${ROUNDS} manches.</p><button class="btn ghost" id="startm" type="button" ${players.length<2?'disabled':''}>Fermer les inscriptions${players.length<2?' (2 joueurs minimum)':''}</button></section>`:'';
+  const invitePanel=(!M.started&&players.length<maxp&&!M.random)?`<section class="panel"><h3>Invite des joueurs · ${maxp-players.length} place${maxp-players.length>1?'s':''} libre${maxp-players.length>1?'s':''}</h3><div class="codebox"><b>${esc(code)}</b><button class="btn sm" id="copycode" type="button">Copier le code</button></div>
     <div class="row"><button class="btn ghost grow" id="sharelink" type="button">Partager le lien d'invitation</button><button class="btn ghost grow" id="copymsg" type="button">Copier le message</button></div>
     <p class="muted" style="font-size:14px">Les joueurs ouvrent le lien, ou saisissent le code dans « En ligne ».${M.mode==='async'?' Tu peux commencer à jouer sans attendre.':''}</p></section>`:'';
   const cols=[me,...others];
   $app.innerHTML=`
-  <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="back" type="button">← Mes parties</button><span class="muted" style="font-size:14px">${M.mode==='live'?'En direct':'En différé'} · ${players.length}/${maxp} joueurs · ${M.dur} s</span></div>
-  ${invitePanel}
+  <div class="row" style="justify-content:space-between"><button class="btn ghost sm" id="back" type="button">← Mes parties</button><span class="muted" style="font-size:14px">${M.random?'🎲 Au hasard · ':''}${M.mode==='live'?'En direct':'En différé'} · ${players.length}/${maxp} joueurs · ${M.dur} s</span></div>
+  ${invitePanel}${randomPanel}
   <div class="scoreline">${ranked.map(x=>`<div class="sc ${finished&&x.rank===1?'win':''} ${x.id===UID?'meb':''}"><div class="vs">${avatar(x.av,40)}<span class="n">${finished?`<b class="rkb">${x.rank}</b> `:''}${esc(x.name)}${x.id===UID?' (toi)':''}</span></div><span class="v">${x.score}</span><span class="d">${x.r}/${ROUNDS} manches</span></div>`).join('')}</div>
   ${action}
   ${closeAsync}
@@ -1315,7 +1356,7 @@ function showRules(){
     ${[['AN','Communs aux Antilles et à la Guyane'],...TERRS].map(([k,n])=>{const list=activeThemes(null).filter(i=>THEMES[i].terr===k);return list.length?`<h5 class="tgh">${esc(n)} · ${list.length}</h5><div class="themes">${list.map(i=>`<span>${esc(THEMES[i].t)}</span>`).join('')}</div>`:'';}).join('')}</section>
   <section><span class="art">ARTICLE 4</span><h4>Réponses acceptées</h4><p>Seules les réponses figurant dans la liste officielle du thème sont comptées. Les majuscules, les accents, les articles (le, la, les…) et les petites fautes de frappe sont tolérés. Les orthographes qui se prononcent de la même façon sont acceptées, en français comme en créole : k ou c ou qu, w ou ou, é ou er, an ou en, lettres doublées, lettres muettes en fin de mot (par exemple Kolonbo pour Colombo, konpè Lapen pour Compère Lapin, chatwou pour chatrou, piman pour piment). Quand une réponse pourrait correspondre à deux réponses différentes de la liste, elle n'est pas comptée.</p></section>
   <section><span class="art">ARTICLE 5</span><h4>Jokers</h4><ul><li>+15 secondes : prolonge une manche de 15 secondes. Un seul par partie.</li><li>Indice : affiche les deux premières lettres et la longueur d'une réponse non trouvée. Deux par partie.</li></ul></section>
-  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>Mode Ti moun : pour les enfants, sur le même téléphone. Les thèmes sont simples (couleurs, chiffres et corps en créole, animaux, plage, contes, carnaval, jeux, métiers, fruits, mots du quotidien), les réponses sont acceptées en français ou en créole, et chaque joueur a 3 indices.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Appui long sur une partie dans « Mes parties » pour la supprimer. Une partie terminée est seulement retirée de ta liste (tes points sont conservés). Si la partie est en cours, tu l'abandonnes : tes manches sont retirées et les autres joueurs continuent sans toi. Si un seul joueur reste, il termine seul.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
+  <section><span class="art">ARTICLE 6</span><h4>Modes de jeu</h4><ul><li>Solo : un joueur tente de faire le meilleur score.</li><li>2 joueurs sur le même téléphone : chacun joue le même thème à son tour.</li><li>Mode Ti moun : pour les enfants, sur le même téléphone. Les thèmes sont simples (couleurs, chiffres et corps en créole, animaux, plage, contes, carnaval, jeux, métiers, fruits, mots du quotidien), les réponses sont acceptées en français ou en créole, et chaque joueur a 3 indices.</li><li>En ligne, de 2 à 5 joueurs, chacun sur son téléphone. Le créateur choisit le nombre de places et peut inviter plusieurs amis ; les places libres se complètent avec le code ou le lien d'invitation.</li><li>En ligne, en direct : les joueurs se retrouvent dans une salle d'attente, puis le créateur lance la partie (2 joueurs minimum). Chaque manche s'ouvre quand tout le monde a terminé la précédente.</li><li>En ligne, adversaire au hasard : le jeu propose un duel en différé avec un joueur de même niveau, ou d'un niveau d'écart, dans le classement mondial. Si personne n'attend, la partie est créée et le prochain joueur de ce niveau la rejoint ; après 24 heures d'attente, elle peut être proposée à un joueur de n'importe quel niveau. Les thèmes sont tirés parmi tous les territoires.</li><li>En ligne, en différé : chacun joue ses ${ROUNDS} manches quand il le souhaite. Le créateur ferme les inscriptions quand il le souhaite ; le classement final s'affiche quand tout le monde a terminé.</li><li>Appui long sur une partie dans « Mes parties » pour la supprimer. Une partie terminée est seulement retirée de ta liste (tes points sont conservés). Si la partie est en cours, tu l'abandonnes : tes manches sont retirées et les autres joueurs continuent sans toi. Si un seul joueur reste, il termine seul.</li><li>Une partie se ferme automatiquement quand toutes les places sont prises. Après le lancement ou la fermeture des inscriptions, plus personne ne peut la rejoindre.</li><li>On rejoint une partie en ligne avec son code à 5 caractères, son lien d'invitation, ou une invitation reçue d'un ami.</li></ul></section>
   <section><span class="art">ARTICLE 7</span><h4>Fin de partie et égalité</h4><p>Les joueurs sont classés selon leur total de points à l'issue des ${ROUNDS} manches. En cas d'égalité de points, le joueur qui a trouvé le plus de réponses passe devant. Si l'égalité persiste, les joueurs partagent la même place. Bonus de classement : ${XP_WIN} points pour le vainqueur, ${XP_TIE} points en cas de première place partagée, ${XP_PLAY} points pour les autres participants.</p></section>
   <section><span class="art">ARTICLE 8</span><h4>Profil, pseudo et amis</h4><ul><li>Pour jouer en ligne, chaque joueur crée un compte gratuit (adresse e-mail et mot de passe), puis un profil avec un pseudo unique et un personnage des contes créoles.</li><li>Le pseudo doit rester correct : pas d'insulte, pas d'usurpation d'identité. L'éditeur peut modifier ou supprimer un pseudo inapproprié.</li><li>On ajoute un ami en saisissant son pseudo. L'amitié est confirmée quand l'autre joueur accepte la demande.</li></ul></section>
   <section><span class="art">ARTICLE 9</span><h4>Classement et niveaux</h4><ul><li>Seules les parties en ligne et le défi du jour comptent pour le classement.</li><li>Points de classement : tous les points marqués en ligne, plus ${XP_WIN} points par victoire, ${XP_TIE} par match nul et ${XP_PLAY} par défaite.</li><li>Trois classements : entre amis, de la semaine et mondial (tous les joueurs). Le classement de la semaine compte les points marqués depuis le lundi ; il repart de zéro chaque lundi à minuit, heure des Antilles.</li><li>Niveaux : ${LEVELS.map(([m,n])=>`${n} (${m})`).join(', ')}.</li></ul></section>

@@ -36,6 +36,7 @@ Durée : environ 45 minutes. Coût : 0 €.
 6. Idem avec `supabase/migration-3-quitter-partie.sql` (supprimer ou quitter une partie).
 7. Idem avec `supabase/migration-4-nettoyage-stats-notifs.sql` (statistiques des réponses, classement de la semaine, notifications, nettoyage automatique), puis `supabase/migration-4b-taches-planifiees.sql` (tâches de chaque nuit et rappel du défi).
 8. Notifications : déploie la fonction `supabase/functions/notify` (Edge Functions → Deploy, **sans** « Verify JWT »), puis remplis la table `app_secrets` : `vapid_public`, `vapid_private` (clés générées avec `npx web-push generate-vapid-keys`), `vapid_subject` (`mailto:ton@adresse`), `cron_secret` (une longue suite de caractères au hasard) et `functions_url` (`https://TON-PROJET.supabase.co/functions/v1`). Mets la même clé publique dans `config.js` (`VAPID_PUBLIC`).
+9. Idem avec `supabase/migration-5-adversaire-aleatoire.sql` (jouer contre un adversaire au hasard de son niveau).
 
 ## Étape 2 — Relier le jeu à la base
 

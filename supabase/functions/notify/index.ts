@@ -2,6 +2,7 @@
 //  kind = "daily"  : rappel du défi du jour (appelé par la tâche planifiée, clé secrète obligatoire)
 //  kind = "invite" : invitation à une partie (appelé par le créateur de la partie)
 //  kind = "friend" : demande d'ami (appelé par l'auteur de la demande)
+//  kind = "joined" : un adversaire au hasard a rejoint la partie (appelé par celui qui la rejoint)
 //  kind = "test"   : notification d'essai sur ses propres téléphones
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -67,6 +68,13 @@ Deno.serve(async (req) => {
       const { data } = await sb.from("push_subs").select("*").eq("user_id", to).eq("invites", true);
       subs = data || [];
       payload = { title: `${pseudo} veut être ton ami`, body: "Accepte sa demande dans l'onglet Amis.", url: "./#amis", tag: `ami-${uid}` };
+    } else if (kind === "joined") {
+      const code = String(body.code || "").toUpperCase();
+      const { data: m } = await sb.from("matches").select("host,players,random,started").eq("code", code).maybeSingle();
+      if (!m || !m.random || !m.started || m.host === uid || !(m.players || []).includes(uid)) return json({ error: "interdit" }, 403);
+      const { data } = await sb.from("push_subs").select("*").eq("user_id", m.host).eq("invites", true);
+      subs = data || [];
+      payload = { title: `${pseudo} a relevé ton défi`, body: "Un adversaire de ton niveau joue ta partie. Touche pour suivre le score.", url: `./#${code}`, tag: `joined-${code}` };
     } else if (kind === "test") {
       const { data } = await sb.from("push_subs").select("*").eq("user_id", uid);
       subs = data || [];
