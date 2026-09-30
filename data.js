@@ -538,3 +538,88 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
  K("Les métiers",["Pêcheur|pechè,pecheur","Boulanger|boulangère","Docteur|médecin,medecin","Maître|maîtresse,professeur,prof","Pompier","Policier|gendarme","Agriculteur|planteur,cultivateur","Coiffeur|coiffeuse","Chauffeur|chauffeur de bus","Marchande|machann,marchand","Infirmier|infirmière","Cuisinier|cuisinière","Facteur","Maçon|macon","*Charpentier","*Vétérinaire|veterinaire","*Conteur|kontè,konte","*Musicien","*Pilote","*Dentiste"],
   ["Au marché, on dit « machann » pour la marchande."]);
 })();
+
+/* ---- Vérification faune et flore (30/09/2026) : pages Faune de la DEAL Martinique, Liste rouge UICN faune de Martinique (2020),
+        Petit guide des amphibiens et reptiles de Martinique (M. Dewynter, 2022), guide des plantes exotiques envahissantes (DEAL, 2021),
+        Les herbiers de phanérogames marines de l'outre-mer (IFRECOR) ---- */
+(function(){
+ const remAlias=(title,name,list)=>{const t=THEMES.find(x=>x.t===title);if(!t)return;const i=t.a.findIndex(s=>s.replace(/^\*+/,'').split('|')[0]===name);if(i<0)return;
+   const [h,al]=t.a[i].split('|');const keep=(al?al.split(','):[]).filter(x=>!list.includes(x));t.a[i]=h+(keep.length?'|'+keep.join(','):'');};
+ const AM="Animaux de Martinique",RE="Reptiles des Antilles et de Guyane",OI="Oiseaux des Antilles",OM="Oiseaux marins des Antilles",MG="Espèces de la mangrove",
+       PL="Arbres, fleurs et plantes des Antilles",EN="Espèces endémiques des Antilles",CO="Coraux et organismes marins",CR="Crustacés des Antilles",MO="Mollusques des Antilles",IN="Insectes des Antilles";
+ // Animaux de Martinique
+ addAlias(AM,"Trembleur",["trembleur gris"]);
+ addAlias(AM,"Mabouya",["thecadactyle","gecko"]);
+ addAlias(AM,"Iguane",["iguane peyi","iguane raye"]);
+ addAlias(AM,"Couresse",["couleuvre couresse"]);
+ addAns(AM,["Crapaud|crapaud agua,crapaud buffle","*Raton laveur|raton","*Anguille","*Colle-roche|colle roche,sicydium","*Scorpion","*Sphérodactyle|spherodactyle",
+   "**Colibri à tête bleue|colibri tete bleue,tete bleue","**Allobate|allobate de la martinique","**Poisson gale","**Murin de la Martinique|murin","**Leptotyphlops|leptotyphlops a deux raies","**Cirique de rivière|cirique de riviere,guinotia"]);
+ // Reptiles
+ addAlias(RE,"Iguane",["iguane raye"]);addAlias(RE,"Iguane des Petites Antilles",["iguane peyi"]);
+ addAlias(RE,"Couresse",["couleuvre couresse"]);addAlias(RE,"Mabouya",["thecadactyle"]);
+ addAns(RE,["*Gecko tokay|tokay","**Gymnophthalme|gymnophtalme,gymnophthalme de plee","**Leptotyphlops|leptotyphlops a deux raies","**Typhlops|typhlops brame"]);
+ // Oiseaux : la « perdrix » des Antilles est une colombe (perdrix rouge, perdrix croissant), pas le colin de Virginie
+ remAlias(OI,"Perdrix",["colin de virginie"]);
+ addAlias(OI,"Perdrix",["perdrix rouge","perdrix croissant","colombe rouviolette","colombe a croissants"]);
+ addAlias(OI,"Trembleur",["trembleur gris","trembleur brun"]);
+ addAlias(OI,"Ramier",["pigeon a cou rouge"]);
+ addAlias(OI,"Tourterelle",["tourterelle a queue carree"]);
+ addAlias(OI,"Merle",["quiscale merle"]);
+ addAlias(OI,"Siffleur des montagnes",["solitaire siffleur"]);
+ addAlias(OI,"Gros-bec",["saltator"]);
+ addAlias(OI,"Carouge",["oriole de la martinique"]);
+ addAns(OI,["*Petite buse|malfini","*Martin-pêcheur|martin pecheur","*Colibri falle-vert|falle vert","*Sporophile rougegorge|pere noir,rouge gorge","**Colibri à tête bleue|colibri tete bleue,tete bleue",
+   "**Martinet chiquesol|chiquesol","**Élénie siffleuse|elenie","**Viréo à moustaches|vireo","**Vacher luisant|vacher,merle de sainte lucie","**Amazone aourou|amazone,perroquet"]);
+ // Oiseaux marins
+ addAlias(OM,"Paille-en-queue",["phaeton a bec jaune","phaeton a bec rouge"]);
+ addAns(OM,["**Petite sterne","**Sterne caugek|caugek","**Sterne pierregarin|pierregarin","**Pétrel diablotin|diablotin"]);
+ // Mangrove
+ addAns(MG,["*Martin-pêcheur|martin pecheur","**Noctilion pêcheur|noctilion,chauve souris pecheuse"]);
+ // Endémiques
+ addAlias(EN,"Trembleur brun",["trembleur gris"]);
+ addAlias(EN,"Hylode de la Martinique",["eleutherodactyle de la martinique","eleutherodactyle"]);
+ addAlias(EN,"Dynaste de Martinique",["dynaste hercule","dynastes reidi"]);
+ addAlias(EN,"Rat pilori",["rat musque de la martinique"]);
+ addAlias(EN,"Couresse de la Martinique",["couleuvre couresse"]);
+ addAns(EN,["*Colibri à tête bleue|colibri tete bleue,tete bleue","*Cirique de rivière|cirique de riviere,guinotia","**Allobate de la Martinique|allobate","**Poisson gale",
+   "**Murin de la Martinique|murin","**Leptotyphlops à deux raies|leptotyphlops","**Scinque mabouya|scinque","**Castnia du Père Pinchon|castnia"]);
+ // Coraux : les herbiers marins des Antilles
+ remAlias(CO,"Herbier",["herbe a tortue"]);
+ addAlias(CO,"Herbier",["herbier marin","herbiers marins"]);
+ addAns(CO,["*Herbe à tortue|herbe a tortue,thalassia","**Herbe à lamantin|herbe a lamantin,syringodium","**Halophila|halophile"]);
+ // Crustacés
+ addAlias(CR,"Bouc",["petit bouc","petits boucs"]);
+ addAns(CR,["**Cirique de rivière|cirique de riviere,guinotia","**Petite chevrette|chevrette","**Écrevisse australienne|cherax,ecrevisse australienne"]);
+ // Mollusques
+ addAns(MO,["**Mélanie tuberculée|melanie","**Ampullaire"]);
+ // Insectes
+ addAlias(IN,"Dynaste hercule",["dynaste de martinique","dynaste reidi"]);
+ addAns(IN,["*Flambeau","*Phasme","*Demoiselle","**Papillon trèfle|papillon trefle","**Castnia|castnia du pere pinchon"]);
+ // Plantes
+ addAns(PL,["*Tulipier du Gabon|tulipier,spathodea","*Langue de belle-mère|langue de belle mere,sansevieria,sanseveria","**Jacinthe d'eau|jacinthe"]);
+ // Nouvelles anecdotes « Ou té sav sa ? »
+ const A=(title,list)=>{const i=THEMES.findIndex(x=>x.t===title);if(i>=0)ANEC[i]=[...(ANEC[i]||[]),...list];};
+ A(AM,["Les chauves-souris sont les seuls mammifères indigènes encore présents en Martinique : l'île en compte 11 espèces, toutes protégées.",
+   "Le manicou n'est pas originaire de la Martinique : des études archéologiques et génétiques ont montré qu'il a été introduit à l'époque coloniale.",
+   "La matoutou falaise, mygale qui ne vit qu'en Martinique, est bleue quand elle est jeune et devient rouge-violette à l'âge adulte."]);
+ A(RE,["Le trigonocéphale est arrivé en Martinique depuis l'Amérique du Sud il y a plus de 4 millions d'années, bien avant l'homme.",
+   "Le leptotyphlops à deux raies, qui ne vit qu'en Martinique, est l'un des plus petits serpents du monde : 11 cm au plus."]);
+ A(OI,["L'oriole de la Martinique, appelé carouge, est le seul oiseau qui ne vit nulle part ailleurs qu'en Martinique."]);
+ A(CR,["La pêche en rivière est interdite en Martinique depuis 2009, à cause de la pollution des cours d'eau par la chlordécone.",
+   "En Martinique, le crabe de terre ne peut être capturé que du 16 juin au 14 février, et seulement si sa carapace mesure plus de 7 cm."]);
+ A(MO,["La Martinique compte 62 espèces d'escargots terrestres, dont 21 ne vivent nulle part ailleurs au monde."]);
+ A(IN,["Le dynaste de Martinique est le seul insecte protégé de l'île. Attiré par la lumière, il est menacé par l'éclairage nocturne près des forêts."]);
+ A(EN,["Le poisson gale est le seul poisson d'eau douce qui ne vit qu'en Martinique.",
+   "L'allobate de la Martinique, une grenouille de 2 cm, ne vit que sur les hauteurs de la montagne Pelée."]);
+ A(CO,["Aux Antilles, les herbiers marins sont surtout formés d'herbe à tortue et d'herbe à lamantin, qui servent de nourriture aux tortues vertes."]);
+ A(PL,["La pomme-rose et le bambou commun sont classés espèces exotiques envahissantes en Martinique depuis 2019."]);
+ // Nouveau thème : espèces exotiques envahissantes (Martinique)
+ T('MQ',"Espèces exotiques envahissantes en Martinique",["Mangouste|mangous","Iguane rayé|iguane commun,iguane raye,iguane vert","Rat|rat noir","Raton laveur|raton","Poisson-lion|poisson lion,rascasse volante",
+   "Crapaud|crapaud agua,crapaud buffle","Escargot géant africain|achatine,escargot geant","Bambou|bambou commun",
+   "*Écrevisse australienne|cherax,ecrevisse","*Gecko tokay|tokay","*Vacher luisant|vacher","*Amazone aourou|amazone,perroquet","*Tilapia","*Guppy","*Jacinthe d'eau|jacinthe",
+   "*Laitue d'eau|laitue","*Tulipier du Gabon|tulipier,spathodea","*Pomme-rose|pomme rose,pommier rose","*Liane mauve|liane de chine","*Hylode de Johnstone|eleutherodactyle de johnstone,hylode",
+   "**Miconia|cancer vert","**Halophila|halophile","**Typhlops brame|typhlops","**Scinax|rainette","**Mélanie tuberculée|melanie","**Courge écarlate|courge ecarlate","**Sanseveria|sansevieria,langue de belle mere","**Bengali rouge|bengali"],
+   ["L'iguane rayé, introduit en Martinique dans les années 1950, menace l'iguane péyi : les deux espèces se croisent et l'iguane péyi disparaît peu à peu.",
+    "Depuis 2019, 107 plantes exotiques envahissantes sont réglementées en Martinique : il est interdit de les vendre, de les transporter ou de les relâcher dans la nature.",
+    "La mangouste, introduite en 1889 pour lutter contre les rats, a causé la disparition de plusieurs reptiles de Martinique."]);
+})();
