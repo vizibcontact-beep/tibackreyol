@@ -650,3 +650,32 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
    "L'iguane péyi est en danger critique, menacé surtout par l'iguane rayé introduit, avec lequel il se croise.",
    "La couleuvre couresse n'a plus été vue en Martinique depuis 1968, mais elle n'est pas encore déclarée éteinte."]);
 })();
+
+/* ---- Guyane : faune (pages Faune de la DGTM Guyane ; Liste rouge UICN faune vertébrée de Guyane, 2017) ---- */
+(function(){
+ T('GF',"Animaux de Guyane",["Jaguar|tigre","Tapir|maipouri,tapir terrestre","Caïman|caiman,caiman noir","Anaconda","Ibis rouge","Singe hurleur|baboune,hurleur","Paresseux","Tatou","Grand fourmilier|fourmilier,tamanoir",
+   "Tortue luth|luth","Iguane vert|iguane","Toucan","Ara","Morpho","Agouti","Colibri","Lamantin","Loutre géante|loutre geante,loutre",
+   "*Puma","*Ocelot","*Pécari|pecari","*Atèle|atele,kwata,atele noir","*Capucin|macaque,capucin brun","*Saïmiri|saimiri,singe ecureuil","*Tamarin|tamarin a mains dorees",
+   "*Hoazin|hoazin huppe","*Coq-de-roche|coq de roche","*Harpie féroce|harpie feroce,harpie","*Hocco|hocco alector","*Agami|agami trompette","*Matamata","*Boa canin|boa emeraude",
+   "*Grage","*Crotale|serpent a sonnette","*Serpent corail|corail","*Dauphin de Guyane|sotalie","*Mérou géant|merou geant,merou","*Dendrobate","*Mygale|mygale de leblond","*Tortue charbonnière|tortue charbonniere",
+   "**Jaguarondi","**Margay|chat margay","**Oncille|chat tigre","**Saki","**Oiseau-cloche|oiseau cloche,araponga blanc","**Jacquot","**Rainette singe","**Papillon cendre|hylesia",
+   "**Biche des palétuviers|biche des paletuviers","**Daguet rouge|daguet","**Podocnémide de Cayenne|podocnemide","**Sterne de Cayenne","**Dipneuste|dipneuste sud americain"],
+  ["Le hoazin huppé, oiseau des marais de Guyane, est le seul oiseau ruminant au monde.",
+   "La Guyane abrite plus de 560 espèces d'oiseaux nicheurs, contre 287 en France métropolitaine.",
+   "Avec plus de 100 espèces, les chauves-souris représentent la majorité des mammifères de Guyane.",
+   "La mygale de Leblond, présente en Guyane, est l'une des plus grandes araignées du monde : jusqu'à 30 cm d'envergure.",
+   "Le caïman noir peut mesurer jusqu'à 6 mètres. Les marais de Kaw abritent une des dernières populations viables au monde.",
+   "Près de 8 000 couples de sternes de Cayenne nichent sur l'île du Grand Connétable : c'est la plus grosse colonie au monde pour cette espèce.",
+   "La Guyane compte plus de 400 espèces de poissons d'eau douce, soit quatre fois plus qu'en France métropolitaine."]);
+ T('GF',"Espèces menacées en Guyane (Liste rouge)",["Loutre géante|loutre geante,loutre geante du bresil","Lamantin|lamantin antillais","Tapir|maipouri,tapir terrestre","Tortue luth|luth","Tortue verte","Cachalot",
+   "Coq-de-roche|coq de roche,coq de roche orange","Hoazin|hoazin huppe","Frégate|fregate,fregate superbe","Ara bleu|ara","Toucan toco|toucan",
+   "*Dauphin de Guyane|sotalie","*Crotale|crotale sud americain,serpent a sonnette","*Podocnémide de Cayenne|podocnemide","*Oiseau-cloche|oiseau cloche,araponga blanc","*Spatule rosée|spatule rosee,spatule",
+   "*Biche des palétuviers|biche des paletuviers","*Petit noctilion|noctilion","*Sterne royale","*Jabiru","*Effraie des clochers|effraie","*Tortue denticulée|tortue denticulee",
+   "**Tyranneau barbu|tyranneau","**Bécassine géante|becassine geante","**Pluvier de Wilson","**Sterne fuligineuse","**Peltocéphale d'Amazonie|peltocephale","**Anomaloglosse de Granville|anomaloglosse",
+   "**Rainette des pripris","**Dipneuste sud-américain|dipneuste","**Harttiella","**Oxyrhynque huppé|oxyrhynque","**Hydrodynaste géant|hydrodynaste","**Courlan brun|courlan","**Grand-duc d'Amérique|grand duc"],
+  ["Environ 10 % des 1 500 espèces de vertébrés de Guyane sont menacées, selon la Liste rouge de 2017.",
+   "Le kamichi cornu, un grand oiseau des marais, a disparu de Guyane.",
+   "Les plages de Guyane sont l'un des principaux sites de ponte au monde pour la tortue luth.",
+   "Le tyranneau barbu, petit oiseau des savanes sèches, compte probablement moins de 150 individus en Guyane : il est en danger critique.",
+   "La loutre géante du Brésil, classée en danger, souffre de la pollution des rivières par l'orpaillage."]);
+})();
