@@ -726,6 +726,6 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
 (()=>{ // réponses signalées par les joueurs (validées le 30/09/2026)
  addAns("Artistes de musique antillaise",["*Paulo Albin|albin","*Richard Birman|birman"]);
  addAns("Grandes figures de l'histoire martiniquaise",["*André Aliker|andre aliker","**Pierre Zobda-Quitman|zobda quitman,zobda-quitman,zobda"]);
- addAns("Carnaval : personnages et costumes",["*Mèdsin Lopital|docteur lopital,docteur hopital,medsin lopital,medecin lopital,medsen lopital"]);
+ addAns("Carnaval : personnages et costumes",["*Mèdsin Lopital|docteur lopital,docteur hopital,medsin lopital,medecin lopital,medsen lopital,doktè lopital,doktè lhopital,dokte lopital,dokte lhopital,doktè l hopital"]);
  addAns("Mots créoles de la cuisine",["*Dachin|dachine"]);
 })();
