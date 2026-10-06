@@ -827,3 +827,15 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
  addAns("Expressions créoles",["*Sa ka maché ?|sa ka mache"]);
  addAns("Mots créoles de la cuisine",["*Kwizin|kwizinn"]);
 })();
+T('GP',"Plantes envahissantes interdites en Guadeloupe",["Tulipier du Gabon|tulipier,spathodea","Pomme rose|pomme-rose,pom woz,syzygium","Bambou|bambo,bambusa","Jacinthe d'eau|jacinthe,eichhornia","Laitue d'eau|pistia",
+  "Langue de belle-mère|langue de belle mere,sansevieria","Framboisier|framboise,rubus","Hortensia|clerodendrum","Mimosa|mimosas","Liane corail|antigone,antigonon","Flamboyant bleu|jacaranda",
+  "*Fougère royale|fougere royale,angiopteris","*Kudzu|faux haricot,pueraria","*Liane mauve|thunbergia","*Œil de Suzanne|oeil de suzanne","*Pothos doré|pothos,pothos dore","*Herbe fontaine","*Salvinie géante|salvinie,salvinia",
+  "*Cancer vert|miconia","*Courge écarlate|courge ecarlate,coccinia","*Fausse camomille|parthenium","*Herbe molasse|herbe a miel,melinis","*Herbe éléphant|herbe elephant,pennisete pourpre","*Massette australe|massette,typha",
+  "*Orangine|triphasia","*Arbre à caoutchouc|arbre a caoutchouc,funtumia","*Bois canon de Guyane|coulequin,cecropia peltata",
+  "**Longose|longose de gardner,longose jaunatre,hedychium","**Hédychie couronnée|hedychie couronnee","**Ambroisie|ambroisie a feuille d armoise,ambroisie trifide,ambrosia","**Berce du Caucase|berce","**Jussie|jussie a grandes fleurs,jussie rampante,ludwigia",
+  "**Batrini|dichrostachys","**Cassier|vachellia","**Chevalier onze heures|turnera","**Vigne ballon|cardiospermum","**Saint sacrement|heliocarpus","**Allamanda pourpre|cryptostegia","**Orchidée colombe|orchidee colombe,dendrobium",
+  "**Arbre à suif chinois|arbre a suif,triadica","**Ailanthe glanduleux|ailanthe,ailanthus","**Balsamine de l'Himalaya|balsamine","**Herbe de Pampa|herbe de la pampa,cortaderia","**Houblon du Japon|houblon","**Myriophylle aquatique|myriophylle",
+  "**Séneçon en arbre|senecon en arbre,baccharis","**Mangium|acacia mangium","**Vigne maronne|rubus alceifolius","**Renouée perfoliée|renouee perfoliee,persicaria","**Herbe à alligators|herbe a alligators,alternanthera"],
+ ["Depuis un arrêté du 9 août 2019, il est interdit en Guadeloupe d'introduire, de transporter, de vendre ou même de garder chez soi les plantes de cette liste.",
+  "Les espèces exotiques envahissantes sont considérées comme la quatrième cause de perte de biodiversité dans le monde.",
+  "Certaines plantes de cette liste ne poussent pas encore en Guadeloupe : elles y sont interdites pour éviter qu'elles passent ensuite vers l'Europe."]);
