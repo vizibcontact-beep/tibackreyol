@@ -272,7 +272,7 @@ T('AN',"Fêtes et traditions",["Carnaval|kanaval","Chanté Nwèl|chante noel,cha
 T('AN',"Espèces endémiques des Antilles",["Trigonocéphale|trigonocephale,fer de lance,bothrops","Pic de la Guadeloupe|tapeur,toto bwa","Iguane des Petites Antilles|iguana delicatissima","Oriole de Martinique|carouge","Anolis de Martinique|anolis roquet","Matoutou falaise|matoutou",
  "*Moqueur gorge-blanche|gorge blanche","*Colibri madère|madere","*Trembleur brun|trembleur","*Siffleur des montagnes|siffleur","*Couresse de la Martinique|couresse","*Hylode de la Martinique|hylode",
  "**Rat pilori|pilori"],
- ["Le rat pilori, grand rongeur endémique de Martinique, a disparu après l'éruption de la montagne Pelée en 1902."]);
+ ["Le rat pilori, grand rongeur qui ne vivait qu'en Martinique, a disparu au début du XXe siècle, sans doute à cause de la mangouste introduite ; l'éruption de la montagne Pelée en 1902 a pu y contribuer."]);
 T('AN',"Animaux de la mer des Caraïbes",["Baleine à bosse|baleine","Cachalot","Dauphin","Tortue marine|tortue","Requin","Raie","Mérou|merou","Poisson-perroquet|perroquet","Barracuda|becune","Murène|murene","Poulpe|chatrou","Langouste","Lambi",
  "*Poisson-lion|rascasse volante","*Raie manta|manta","*Raie léopard|raie aigle","*Requin nourrice","*Poisson-coffre|coffre","*Hippocampe","*Chirurgien|poisson chirurgien","*Globicéphale|globicephale","*Lamantin",
  "**Orque","**Poisson-ange|poisson ange","**Balaou"],
@@ -634,7 +634,7 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
   ["L'agouti vivait autrefois en Martinique, mais il en a disparu : la Liste rouge de 2020 le classe « disparu au niveau régional ».",
    "L'amazone de la Martinique, un perroquet qui ne vivait que sur l'île, est aujourd'hui éteinte.",
    "Le lamantin des Caraïbes vivait autrefois dans les eaux de la Martinique, où il a disparu. La commune du Lamentin tiendrait son nom de ces animaux.",
-   "Le rat pilori, grand rongeur qui ne vivait qu'en Martinique, a disparu après l'éruption de la montagne Pelée en 1902.",
+   "Le rat pilori, grand rongeur qui ne vivait qu'en Martinique, a disparu au début du XXe siècle, sans doute à cause de la mangouste introduite ; l'éruption de la montagne Pelée en 1902 a pu y contribuer.",
    "Le phoque moine des Caraïbes, le seul phoque de la région, est aujourd'hui éteint.",
    "La mangouste, introduite en 1889, est l'une des principales causes de la disparition de plusieurs reptiles de Martinique."]);
  T('MQ',"Espèces menacées en Martinique (Liste rouge)",["Trigonocéphale|trigonocephale,fer de lance,bothrops","Iguane péyi|iguane peyi,iguane des petites antilles","Tortue verte","Tortue luth|luth","Tortue imbriquée|tortue imbriquee,caret",
@@ -813,4 +813,17 @@ addAlias("Mots créoles de la nature","Lapli",["la pluie","lapli"]);
  const A=(title,list)=>{const i=THEMES.findIndex(x=>x.t===title);if(i>=0)ANEC[i]=[...(ANEC[i]||[]),...list];};
  A("Jours fériés aux Antilles et en Guyane",["À Saint-Martin, l'abolition de l'esclavage est fêtée le 28 mai ; à Saint-Barthélemy, le 9 octobre (1847, sous la souveraineté suédoise)."]);
  A("Plages de Guadeloupe",["L'Anse Canot se trouve à Saint-Louis, sur l'île de Marie-Galante."]);
+})();
+(()=>{ // relecture IA, lot 6 et fichier consolidé (06/10/2026)
+ const remAlias=(title,name,list)=>{const t=THEMES.find(x=>x.t===title);if(!t)return;const i=t.a.findIndex(s=>s.replace(/^\*+/,'').split('|')[0]===name);if(i<0)return;
+   const [h,al]=t.a[i].split('|');const keep=(al?al.split(','):[]).filter(x=>!list.includes(x));t.a[i]=h+(keep.length?'|'+keep.join(','):'');};
+ remAlias("Animaux de Martinique","Trembleur",["trembleur brun"]); // en Martinique, c'est le trembleur gris (le brun n'y est que de passage)
+ addAlias("Mots créoles du carnaval","Bradjak",["bwadjak"]);
+ addAlias("Produits locaux de Martinique","Bakoua",["bakwa"]);
+ addAlias("Produits locaux de Martinique","Sirop de batterie",["sirop batterie"]);
+ addAlias("Coraux et organismes marins","Oursin diadème",["oursin noir","oursin diademe"]);
+ addAlias("Expressions créoles","Pa ni pwoblèm",["pani pwoblem","pani pwoblèm"]);
+ addAlias("Expressions créoles","Tjenbé rèd pa moli",["tchimbé rèd pa moli","kenbé rèd pa moli"]);
+ addAns("Expressions créoles",["*Sa ka maché ?|sa ka mache"]);
+ addAns("Mots créoles de la cuisine",["*Kwizin|kwizinn"]);
 })();
