@@ -89,7 +89,7 @@ Sans cette étape, les liens des e-mails (confirmation, mot de passe oublié) ne
 
 ## Réglages conseillés
 
-- **E-mails en français** : Authentication → **Email Templates** → traduis les modèles « Confirm signup » et « Reset password ».
+- **E-mails en français et service d'envoi** : suis le guide `supabase/emails-francais.md` (Gmail ou Brevo, modèles d'e-mails en français prêts à copier).
 - **Limite d'e-mails** : le service d'e-mail intégré de Supabase n'envoie que quelques e-mails par heure. C'est suffisant pour les tests. Avant d'ouvrir le jeu au public, branche un service d'envoi gratuit (Brevo, Resend…) dans Authentication → **SMTP Settings**.
 - **Pendant les tests seulement**, tu peux désactiver la confirmation d'e-mail (Authentication → Sign In / Providers → Email → *Confirm email*) pour aller plus vite. Réactive-la avant le lancement public.
 - **Projet gratuit en pause** : Supabase met en pause un projet gratuit resté inactif environ une semaine. Il suffit de le relancer depuis le tableau de bord. Si le jeu a des joueurs réguliers, ce n'est pas un problème.
