@@ -2,31 +2,32 @@
 
 Deux réglages, à faire une seule fois dans Supabase (projet **tibackreyol**).
 
-## 1. Brancher un service d'envoi (SMTP)
+## 1. Le plan retenu (environ 8 € par an)
 
-Sans ce réglage, Supabase n'envoie les e-mails **qu'aux membres de ton équipe Supabase**, et seulement quelques-uns par heure. Les autres joueurs ne reçoivent pas leur code de confirmation ni le lien « mot de passe oublié ».
+- Domaine **jeukreyol.fr** acheté chez OVH (servira pour tous les jeux).
+- E-mails **reçus** sur contact@jeukreyol.fr : redirigés vers le Gmail personnel.
+- E-mails **envoyés** par les jeux : Brevo gratuit (300 par jour, tous jeux confondus).
 
-### Option A — Gmail (le plus simple, jusqu'à 500 e-mails par jour)
+Sans service d'envoi, Supabase n'envoie les e-mails **qu'aux membres de l'équipe Supabase** : les autres joueurs ne reçoivent ni code ni lien « mot de passe oublié ».
 
-1. Sur ton compte Google : **Sécurité** → active la **validation en deux étapes** si ce n'est pas déjà fait.
-2. Toujours dans **Sécurité**, ouvre **Mots de passe des applications**, crée-en un nommé « Ti Bac Kréyol » et copie le code de 16 lettres.
-3. Dans Supabase : **Authentication** → **Emails** → onglet **SMTP Settings** → active **Enable custom SMTP** et remplis :
-   - Sender email : ton adresse Gmail
-   - Sender name : `Ti Bac Kréyol`
-   - Host : `smtp.gmail.com`
-   - Port : `587`
-   - Username : ton adresse Gmail
-   - Password : le code de 16 lettres
-4. **Save**.
+### Étape 1 — Acheter jeukreyol.fr chez OVH
+Cherche le domaine sur ovhcloud.com, refuse les options payantes (hébergement, e-mail pro), paie.
 
-### Option B — Brevo (gratuit, 300 e-mails par jour, adresse d'expéditeur dédiée)
+### Étape 2 — Rediriger contact@jeukreyol.fr vers Gmail
+Espace client OVH → **Web Cloud** → **Emails** → ton domaine → **Redirection** → **Ajouter** : de `contact@jeukreyol.fr` vers ton Gmail. (Ajoute plus tard tibac@, noreply@… de la même façon.)
 
-1. Crée un compte sur brevo.com, puis **Senders, domains & dedicated IPs** → ajoute et valide ton adresse d'expéditeur.
-2. **SMTP & API** → onglet **SMTP** : note le **login SMTP** et génère une **clé SMTP**.
-3. Dans Supabase (même écran qu'au-dessus) :
-   - Host : `smtp-relay.brevo.com` — Port : `587`
-   - Username : le login SMTP Brevo — Password : la clé SMTP
-   - Sender email : l'adresse validée — Sender name : `Ti Bac Kréyol`
+### Étape 3 — Brevo : vérifier le domaine et l'expéditeur
+1. Crée un compte gratuit sur brevo.com.
+2. **Expéditeurs, domaines et IP dédiées** → **Domaines** → **Ajouter un domaine** → `jeukreyol.fr`. Accepte la configuration automatique avec OVH si Brevo la propose ; sinon, copie chaque ligne DNS indiquée dans OVH (**Noms de domaine** → jeukreyol.fr → **Zone DNS** → **Ajouter une entrée**). Clique sur **Vérifier** (quelques minutes à quelques heures).
+3. **Expéditeurs** → ajoute `contact@jeukreyol.fr`, nom `Ti Bac Kréyol`. Le code de confirmation arrive dans ton Gmail grâce à l'étape 2.
+4. **SMTP et API** → onglet **SMTP** : note le **login SMTP** et génère une **clé SMTP** (garde-la pour toi).
+
+### Étape 4 — Brancher Brevo dans Supabase
+Projet **tibackreyol** → **Authentication** → **Emails** → **SMTP Settings** → active **Enable custom SMTP** :
+- Sender email : `contact@jeukreyol.fr` — Sender name : `Ti Bac Kréyol`
+- Host : `smtp-relay.brevo.com` — Port : `587`
+- Username : le login SMTP Brevo — Password : la clé SMTP
+- **Save**
 
 ### Ensuite
 
