@@ -3,24 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Ti Bac Kréyol</title>
-<meta name="description" content="Le petit bac de la culture antillaise : communes, fruits, contes, musique, nature… Joue seul, à deux ou en ligne avec tes amis.">
+<title>Ti Bac Kréyol · Le petit bac de la culture antillaise</title>
+<meta name="description" content="Jeu gratuit de petit bac sur la culture des Antilles et de la Guyane : communes, fruits, contes, musique, créole, nature… Joue seul, à deux, en ligne avec tes amis ou relève le défi du jour.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://tibackreyol.vercel.app/">
 <meta name="theme-color" content="#0C262E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ti Bac Kréyol">
-<meta property="og:title" content="Ti Bac Kréyol">
-<meta property="og:description" content="Le petit bac de la culture antillaise. Viens m'affronter !">
-<meta property="og:image" content="icons/icon-512.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Ti Bac Kréyol">
+<meta property="og:title" content="Ti Bac Kréyol · Le petit bac de la culture antillaise">
+<meta property="og:description" content="Communes, fruits, contes, musique, créole… Combien de réponses trouveras-tu avant la fin du chrono ? Viens m'affronter !">
+<meta property="og:url" content="https://tibackreyol.vercel.app/">
+<meta property="og:image" content="https://tibackreyol.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Ti Bac Kréyol, le petit bac de la culture antillaise">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ti Bac Kréyol · Le petit bac de la culture antillaise">
+<meta name="twitter:description" content="Communes, fruits, contes, musique, créole… Combien de réponses trouveras-tu avant la fin du chrono ?">
+<meta name="twitter:image" content="https://tibackreyol.vercel.app/og-image.png">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="preload" href="fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/bagel-fat-one.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 <style>html,body{margin:0} :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)} [hidden]{display:none!important}</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Ti Bac Kréyol","url":"https://tibackreyol.vercel.app/","description":"Jeu gratuit de petit bac sur la culture des Antilles et de la Guyane.","inLanguage":"fr","genre":["Jeu de lettres","Quiz"],"gamePlatform":"Navigateur web","applicationCategory":"Game","operatingSystem":"Tous","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"image":"https://tibackreyol.vercel.app/og-image.png"}</script>
 </head>
 <body>
 <div class="top">
@@ -30,10 +44,13 @@
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
   </div>
 </div>
-<main class="wrap" id="app"></main>
-<script src="vendor/supabase.js"></script>
-<script src="config.js"></script>
-<script src="data.js"></script>
-<script src="app.js"></script>
+<main class="wrap" id="app"><noscript><section class="panel"><h2>Le petit bac 100 % Antillais</h2><p>Pour jouer à Ti Bac Kréyol, active JavaScript dans ton navigateur.</p></section></noscript></main>
+<footer class="foot-links" aria-label="Informations">
+  <a href="#regles" data-go="regles">Règlement</a><a href="#legal" data-go="legal">Mentions légales</a><a href="confidentialite.html">Confidentialité</a><a href="cgu.html">Conditions d'utilisation</a><a href="mailto:vizib.contact@gmail.com">Contact</a>
+</footer>
+<script src="vendor/supabase.js" defer></script>
+<script src="config.js" defer></script>
+<script src="data.js" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>

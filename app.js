@@ -88,6 +88,8 @@ const AVATARS={
  maskilili:{n:'Maskilili',bg:'#2E8B45'},touloulou:{n:'Touloulou',bg:'#2D55B0'},mounmo:{n:'Moun Mò',bg:'#474A9E'}
 };
 const AVKEYS=Object.keys(AVATARS);
+/* Pseudos interdits (grossièretés courantes, français et créole) */
+const BADWORDS=/(connard|connasse|encul|putain|salop|merde|niquet|niquer|batard|bâtard|pédé|fdp|nazi|hitler|kouni|koukoun|manmaw|manmanw)/;
 const avKey=k=>AVATARS[k]?k:'lapen';
 function avatar(k,size){k=avKey(k);const a=AVATARS[k];return `<span class="av" style="background:${a.bg};${size?`width:${size}px;height:${size}px`:''}"><img src="avatars/${k}.jpg" alt="${a.n}" loading="lazy" width="256" height="256"></span>`;}
 
@@ -152,6 +154,7 @@ function go(t){
   ({jouer:showSetup,defi:showDaily,admin:showAdmin,enligne:showOnline,amis:showFriends,classement:showRanking,regles:showRules,compte:showAccount,legal:showLegal})[t]();
 }
 byId('mepill').onclick=()=>go('compte');
+document.querySelectorAll('[data-go]').forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.go);});
 
 /* ---------- Moteur d'une manche ---------- */
 function playRound({who,label,th,dur,jokers,score,onFinish,last}){
@@ -231,6 +234,8 @@ function showSetup(){
   <section class="panel">
     <h2>Le petit bac 100 % Antillais</h2>
     <p class="muted">5 manches, un thème par manche. Tape un maximum de réponses avant la fin du chrono. Le barème et la liste des thèmes sont dans l'onglet Règlement.</p>
+    <div class="cta"><button class="btn" id="quick" type="button">▶ Jouer maintenant</button><button class="btn ghost" id="quickd" type="button">Défi du jour</button></div>
+    <p class="foot" style="text-align:left">${settings.count===2?'2 joueurs':'Solo'} · ${settings.kid?'mode Ti moun':esc((settings.terr||[]).map(x=>TERR_NAME[x]).join(', '))} · ${settings.dur} s par manche. Les réglages sont juste en dessous.</p>
   </section>
   <section class="panel">
     <h3>Partie sur ce téléphone</h3>
@@ -273,6 +278,7 @@ function showSetup(){
   byId('c2').onclick=()=>{readNames();settings.count=2;saveSettings();showSetup();};
   $app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{readNames();settings.dur=+b.dataset.d;saveSettings();showSetup();});
   byId('go').onclick=()=>{readNames();saveSettings();newLocalGame();};
+  byId('quick').onclick=()=>{readNames();saveSettings();newLocalGame();};byId('quickd').onclick=()=>go('defi');
   byId('toOnline').onclick=()=>go('enligne');byId('toDaily').onclick=()=>go('defi');bindInstall();
   byId('toFriends').onclick=()=>go('amis');
 }
@@ -349,7 +355,7 @@ let SESSION=null,UID=null,READY=false,RECOVERY=false;
 let MEP=null,MEPLOADED=false,FRIENDSHIPS=[],MYMATCHES=[],INVITES=[],TOP=[],TOPW=[],PCACHE={},PFETCH={};
 let MYREPORTS=[],ALLREPORTS=[],MYDAILY=null,MYDAILY_LOADED=false,EARNED=null;
 let CURRENT=null,PENDING_CODE=null,AWARDING={},CELEBRATED={};
-{const h=(location.hash||'').replace('#','').toUpperCase();if(h==='DEFI'||h==='AMIS'){tab=h.toLowerCase();history.replaceState(null,'',location.pathname);}else if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;
+{const h=(location.hash||'').replace('#','').toUpperCase();if(['DEFI','AMIS','REGLES','LEGAL','JOUER','ENLIGNE','CLASSEMENT'].includes(h)){tab=h.toLowerCase();history.replaceState(null,'',location.pathname);}else if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;
  else{try{const k=localStorage.getItem('tibac_pending');if(k&&/^[A-Z0-9]{5}$/.test(k))PENDING_CODE=k;}catch(e){}}}
 const URLAUTH=location.hash+location.search;
 const FROM_EMAIL=/access_token=|type=signup|type=email|type=magiclink/.test(URLAUTH);
@@ -381,6 +387,7 @@ function paintPill(){
 function dbMsg(e){
   const c=e&&(e.code||e.status);
   if(c==='23505')return 'Cet élément existe déjà.';
+  if(c==='P0001'&&/Limite/.test(e.message||''))return 'Tu as atteint la limite du jour pour cette action. Réessaie demain.';
   if(c==='42501'||c===401||c===403)return "Action refusée : vérifie que tu es bien connecté·e.";
   if(!navigator.onLine)return 'Pas de connexion internet. Réessaie quand tu seras connecté·e.';
   return 'La connexion au serveur a échoué. Réessaie dans un instant.';
@@ -497,7 +504,7 @@ function showAccount(){
     <h3>${hasProfile()?'Mon profil':'Créer mon profil'}</h3>
     ${hasProfile()?`<div class="hero-me">${avatar(myAvatar(),64)}<div><h2 style="font-size:24px">${esc(myPseudo())}</h2><p class="muted" style="font-size:14px">Niveau ${lv.i+1} · ${esc(lv.name)} · ${MEP.xp||0} pts</p></div></div>
       <div class="bar" aria-hidden="true"><i style="width:${lv.pct}%"></i></div><p class="muted" style="font-size:13px">${lv.next!==null?`Encore ${lv.next-(MEP.xp||0)} pts pour devenir ${esc(lv.nextName)}`:'Niveau maximum atteint'}</p>`:''}
-    <label class="fld">Pseudo (unique, 3 à 16 caractères). C'est avec lui que tes amis te trouvent.<input type="text" id="ps" maxlength="16" autocomplete="nickname" placeholder="Ex. : TiLapen972" value="${esc(hasProfile()?myPseudo():'')}"></label>
+    <label class="fld">Pseudo (unique, 3 à 16 caractères). C'est avec lui que tes amis te trouvent.<input type="text" id="ps" required minlength="3" maxlength="16" pattern="[A-Za-zÀ-ÿ0-9 _\-]{3,16}" autocomplete="nickname" placeholder="Ex. : TiLapen972" value="${esc(hasProfile()?myPseudo():'')}"></label>
     <h3>Ton personnage</h3>
     <div class="avgrid">${AVKEYS.map(k=>`<button type="button" class="avopt" data-av="${k}" aria-pressed="${k===PICK}">${avatar(k)}<span>${AVATARS[k].n}</span></button>`).join('')}</div>
     <div class="row"><button class="btn" id="save" type="button">${hasProfile()?'Enregistrer':'Créer mon profil'}</button><span id="saved" aria-live="polite"></span></div>
@@ -514,7 +521,9 @@ function showAccount(){
   $app.querySelectorAll('[data-av]').forEach(b=>b.onclick=()=>{PICK=b.dataset.av;$app.querySelectorAll('[data-av]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
   byId('save').onclick=async function(){
     const msg=byId('saved');const p=byId('ps').value.trim();
-    if(!/^[A-Za-zÀ-ÿ0-9 _\-]{3,16}$/.test(p)){msg.className='bad';msg.textContent='3 à 16 caractères : lettres, chiffres, espace, - ou _.';return;}
+    byId('ps').removeAttribute('aria-invalid');
+    if(!/^[A-Za-zÀ-ÿ0-9 _\-]{3,16}$/.test(p)){msg.className='bad';msg.textContent='3 à 16 caractères : lettres, chiffres, espace, - ou _.';byId('ps').setAttribute('aria-invalid','true');byId('ps').focus();return;}
+    if(BADWORDS.test(p.toLowerCase().replace(/[^a-zà-ÿ]/g,''))){msg.className='bad';msg.textContent='Ce pseudo n\'est pas autorisé. Choisis-en un autre.';byId('ps').setAttribute('aria-invalid','true');byId('ps').focus();return;}
     this.disabled=true;msg.className='muted';msg.textContent='Enregistrement…';
     const r=await saveProfile(p,PICK);
     if(r){msg.className='bad';msg.textContent=r;this.disabled=false;return;}
@@ -533,9 +542,11 @@ function showLogin(){
   ${PENDING_CODE?`<p class="notice">Connecte-toi pour rejoindre la partie <b>${esc(PENDING_CODE)}</b>.</p>`:''}
   <section class="panel">
     <div class="seg" role="group" aria-label="Connexion"><button type="button" data-am="login" aria-pressed="${!signup}">Se connecter</button><button type="button" data-am="signup" aria-pressed="${signup}">Créer un compte</button></div>
-    <form id="authf" class="panel" style="padding:0;border:0;background:none" autocomplete="on">
-      <label class="fld">Adresse e-mail<input type="text" id="em" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="toi@exemple.com"></label>
-      <label class="fld">Mot de passe${signup?' (8 caractères minimum)':''}<input type="password" id="pw" autocomplete="${signup?'new-password':'current-password'}" class="pw"></label>
+    <form id="authf" class="panel" style="padding:0;border:0;background:none" autocomplete="on" novalidate>
+      <label class="fld">Adresse e-mail<input type="email" id="em" name="email" required maxlength="254" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="toi@exemple.com" aria-describedby="amsg"></label>
+      <label class="fld">Mot de passe${signup?' (8 caractères minimum)':''}<input type="password" id="pw" name="password" required ${signup?'minlength="8"':''} maxlength="72" autocomplete="${signup?'new-password':'current-password'}" class="pw" aria-describedby="amsg"></label>
+      <label class="hp" aria-hidden="true">Site web<input type="text" id="hpw" name="website" tabindex="-1" autocomplete="off"></label>
+      ${signup?`<label class="chk"><input type="checkbox" id="cgu" required> J'accepte les <a href="cgu.html" target="_blank" rel="noopener">conditions d'utilisation</a> et la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</label>`:''}
       <button class="btn wide" type="submit" id="authgo">${signup?'Créer mon compte':'Se connecter'}</button>
       <p id="amsg" aria-live="polite"></p>
     </form>
@@ -546,8 +557,13 @@ function showLogin(){
   const msg=byId('amsg');
   byId('authf').onsubmit=async e=>{
     e.preventDefault();const em=byId('em').value.trim(),pw=byId('pw').value;
-    if(!/^\S+@\S+\.\S+$/.test(em)){msg.className='bad';msg.textContent='Adresse e-mail invalide.';return;}
-    if(pw.length<(signup?8:1)){msg.className='bad';msg.textContent=signup?'Le mot de passe doit faire au moins 8 caractères.':'Saisis ton mot de passe.';return;}
+    const bad=(id,t)=>{msg.className='bad';msg.textContent=t;const f=byId(id);if(f){f.setAttribute('aria-invalid','true');f.focus();}};
+    ['em','pw'].forEach(id=>byId(id).removeAttribute('aria-invalid'));
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))return bad('em','Adresse e-mail invalide : vérifie qu\'elle ressemble à toi@exemple.com.');
+    if(pw.length<(signup?8:1))return bad('pw',signup?'Le mot de passe doit faire au moins 8 caractères.':'Saisis ton mot de passe.');
+    if(signup&&!byId('cgu').checked){msg.className='bad';msg.textContent='Coche la case pour accepter les conditions d\'utilisation.';byId('cgu').focus();return;}
+    if(byId('hpw').value){msg.className='muted';msg.textContent='Un instant…';return;} // piège à robots : un humain ne remplit pas ce champ invisible
+    if(signup){const last=+(sessionStorage.getItem('tibac_su')||0);if(Date.now()-last<30000)return bad('em','Patiente quelques secondes avant de réessayer.');sessionStorage.setItem('tibac_su',Date.now());}
     byId('authgo').disabled=true;msg.className='muted';msg.textContent='Un instant…';
     if(signup){
       rememberPending();
@@ -601,7 +617,7 @@ function authMsg(e){
 }
 function showNewPassword(){
   $app.innerHTML=`<section class="panel"><h2>Choisis un nouveau mot de passe</h2>
-  <form id="npf" class="panel" style="padding:0;border:0;background:none"><label class="fld">Nouveau mot de passe (8 caractères minimum)<input type="password" id="npw" autocomplete="new-password" class="pw"></label>
+  <form id="npf" class="panel" style="padding:0;border:0;background:none"><label class="fld">Nouveau mot de passe (8 caractères minimum)<input type="password" id="npw" required minlength="8" maxlength="72" autocomplete="new-password" class="pw"></label>
   <button class="btn" type="submit">Enregistrer</button><p id="nmsg" aria-live="polite"></p></form></section>`;
   byId('npf').onsubmit=async e=>{e.preventDefault();const pw=byId('npw').value,m=byId('nmsg');
     if(pw.length<8){m.className='bad';m.textContent='8 caractères minimum.';return;}
@@ -803,7 +819,7 @@ function showOnline(){
   </section>
   <section class="panel">
     <h3>Rejoindre avec un code</h3>
-    <div class="entry"><input type="text" class="code" id="jc" maxlength="5" placeholder="CODE" autocapitalize="characters"><button class="btn" id="join" type="button">Rejoindre</button></div>
+    <div class="entry"><input type="text" class="code" id="jc" maxlength="5" placeholder="CODE" autocapitalize="characters" autocomplete="off" pattern="[A-Za-z0-9]{5}" aria-label="Code de la partie"><button class="btn" id="join" type="button">Rejoindre</button></div>
     <p class="bad" id="jerr" aria-live="polite"></p>
   </section>
   <section class="panel"><h3>Mes parties</h3><div class="mlist" id="mlist"></div><p class="foot" id="mhint" style="text-align:left" hidden>Appui long sur une partie pour la supprimer.</p></section>`;
@@ -1378,21 +1394,33 @@ function showLegal(){
   <section><h4>Hébergement</h4><p>Le site est hébergé par Vercel Inc. (vercel.com). Les comptes et les données de jeu sont hébergés par Supabase (supabase.com).</p></section>
   <section><h4>Propriété intellectuelle</h4><p>Le concept, la présentation, les illustrations des personnages, les textes et les listes de réponses de Ti Bac Kréyol sont la propriété de l'éditrice. Toute reproduction sans autorisation est interdite. Les personnages représentés sont issus des contes, légendes et carnavals traditionnels des Antilles et de la Guyane. Les noms de marques cités dans les thèmes appartiennent à leurs propriétaires et sont mentionnés à titre informatif, sans partenariat.</p></section>
   <section><h4>Contenus</h4><p>Les listes de réponses ont été établies à partir de connaissances générales sur les Antilles et la Guyane. Elles ne sont pas exhaustives et peuvent contenir des erreurs. Tout signalement est bienvenu, depuis le jeu ou à l'adresse de contact.</p></section>
-  <section><h4>Données personnelles</h4><ul>
-    <li>Données traitées : ton adresse e-mail (pour la connexion), un identifiant technique de compte, ton pseudo, ton personnage, ta liste d'amis et les demandes d'amis, tes résultats (réponses trouvées, points, points de la semaine, victoires, niveau, badges, scores du défi du jour), la date de ta dernière activité, les réponses que tu signales et, si tu actives les notifications, l'adresse technique d'envoi fournie par ton navigateur et tes choix de notifications. Ton mot de passe est chiffré et n'est jamais visible par l'éditrice.</li>
-    <li>Visibilité : ton pseudo, ton personnage, ton niveau et tes points sont visibles par les autres joueurs, notamment dans les classements. Ton adresse e-mail n'est jamais affichée. Les réponses signalées ne sont visibles que par l'éditrice.</li>
-    <li>Statistiques : pour ajuster les points des réponses, le jeu compte combien de fois chaque réponse est trouvée dans chaque thème. Ces compteurs sont anonymes : ils ne sont reliés à aucun joueur.</li>
-    <li>Notifications : elles ne sont envoyées qu'aux joueurs qui les ont activées (rappel du défi du jour, invitations, demandes d'amis). On peut les couper à tout moment dans l'onglet Connexion ou dans les réglages du téléphone. Elles passent par le service de notification du navigateur (Google, Apple ou Mozilla).</li>
-    <li>Finalité : faire fonctionner les comptes, les parties en ligne, le système d'amis, les classements et l'amélioration des listes. Aucune donnée n'est vendue ni utilisée à des fins publicitaires.</li>
-    <li>Durées de conservation : le compte et le profil sont supprimés après 2 ans sans connexion, ou immédiatement sur demande ; les parties en ligne et les scores sont conservés 12 mois ; les réponses signalées sont conservées 12 mois après leur traitement. Ce nettoyage est fait automatiquement chaque nuit.</li>
-    <li>Tu peux supprimer toi-même ton compte et toutes tes données depuis l'onglet Connexion (« Supprimer mon compte »).</li>
-    <li>Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'opposition et de suppression de tes données. Pour l'exercer, écris à ${MAIL}. Tu peux aussi adresser une réclamation à la CNIL (cnil.fr).</li>
-  </ul></section>
-  <section><h4>Stockage local</h4><p>Le jeu enregistre dans ton navigateur ta session de connexion et tes préférences (noms des joueurs, durée des manches, territoires choisis, sons), ton meilleur nombre de réponses par thème et ton dernier score du défi à partager, et garde une copie des fichiers du jeu pour s'ouvrir plus vite. Il n'utilise pas de cookies publicitaires ni de traceurs tiers.</p></section>
-  <section><h4>Mise à jour</h4><p>Mentions mises à jour le 29 septembre 2026.</p></section>
+  <section><h4>Données personnelles et cookies</h4><p>Ce que le jeu enregistre, pourquoi, combien de temps et comment exercer tes droits : voir la <a href="confidentialite.html">politique de confidentialité</a>. Les règles d'utilisation du jeu sont dans les <a href="cgu.html">conditions générales d'utilisation</a>.</p>
+  <p>Mesure d'audience anonyme (sans cookie) : <b id="cstate"></b> <button class="btn ghost sm" id="cswitch" type="button"></button></p></section>
+  <section><h4>Mise à jour</h4><p>Mentions mises à jour le 23 octobre 2026.</p></section>
   </div></section>`;
   byId('cpmail').onclick=function(){copyText(MAIL,this);};
+  const paint=()=>{const on=consent()==='yes';byId('cstate').textContent=on?'activée':'désactivée';byId('cswitch').textContent=on?'Désactiver':'Activer';};
+  byId('cswitch').onclick=()=>{setConsent(consent()==='yes'?'no':'yes');paint();toast(consent()==='yes'?'Mesure d\'audience activée.':'Mesure d\'audience désactivée.');};paint();
 }
+
+/* =================== CONSENTEMENT ET MESURE D'AUDIENCE =================== */
+/* Vercel Web Analytics : sans cookie, chargé seulement si le joueur l'accepte */
+function consent(){try{return localStorage.getItem('tibac_consent');}catch(e){return null;}}
+function setConsent(v){try{localStorage.setItem('tibac_consent',v);}catch(e){}if(v==='yes')loadAnalytics();else if(v==='no'&&window.__vaLoaded)location.reload();}
+function loadAnalytics(){
+  if(window.__vaLoaded||/localhost|127\.0\.0\.1/.test(location.hostname))return;window.__vaLoaded=true;
+  window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};
+  const sc=document.createElement('script');sc.defer=true;sc.src='/_vercel/insights/script.js';document.head.appendChild(sc);
+}
+function cookieBanner(){
+  if(consent()){if(consent()==='yes')loadAnalytics();return;}
+  const d=document.createElement('div');d.className='cookie';d.setAttribute('role','dialog');d.setAttribute('aria-label','Mesure d\'audience');
+  d.innerHTML=`<p>🍪 Ti Bac Kréyol n'utilise ni cookie publicitaire ni traceur. Acceptes-tu une <b>mesure d'audience anonyme et sans cookie</b> pour nous aider à améliorer le jeu ? <a href="confidentialite.html#cookies">En savoir plus</a></p>
+  <div class="row"><button class="btn sm" type="button" data-c="yes">Accepter</button><button class="btn ghost sm" type="button" data-c="no">Refuser</button></div>`;
+  d.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{setConsent(b.dataset.c);d.remove();});
+  document.body.appendChild(d);
+}
+setTimeout(cookieBanner,800);
 
 /* =================== DÉMARRAGE =================== */
 renderTabs();paintPill();
