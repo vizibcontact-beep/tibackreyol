@@ -80,6 +80,7 @@ function finish(restored){
     <div class="cta">${daily?'<button class="btn" id="share" type="button">Partager mon résultat</button>':''}<button class="btn ghost" id="again" type="button">${daily?'Jouer un mot au hasard':'Encore un mot'}</button></div>`;
   if(daily)$('share').onclick=()=>JK.share(txt);
   $('again').onclick=()=>{$('end').hidden=true;start(false);};
+  if(daily)JK.board('mo',{score:won?TRIES+1-rows.length:0,xp:won?11-rows.length:1,detail:won?`${rows.length}/${TRIES} essai${rows.length>1?'s':''}`:'pas trouvé'});
 }
 function keyboard(){
   const L=['AZERTYUIOP','QSDFGHJKLM','WXCVBN'];

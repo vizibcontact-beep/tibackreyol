@@ -79,3 +79,15 @@ html,body{margin:0}
 .map-box .guess{fill:var(--gold);stroke:#2A1C00;stroke-width:.6}
 .map-box .target{fill:var(--red);stroke:#fff;stroke-width:.6}
 .map-box .line{stroke:var(--gold);stroke-width:.6;stroke-dasharray:2 2}
+
+.jk-board{background:var(--card);border-radius:14px;padding:14px 16px;margin:14px 0;text-align:left}
+.jk-board h3{margin:0 0 6px;font-size:17px}
+.jk-gain{font-size:14px;margin:4px 0 10px}
+.jk-gain a{color:var(--gold);font-weight:700}
+.jk-top{list-style:none;margin:0;padding:0}
+.jk-top li{display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.08);font-size:15px}
+.jk-top li:last-child{border-bottom:0}
+.jk-top li.me{background:rgba(255,200,60,.14);border-radius:8px;font-weight:700}
+.jk-top .rk{width:30px;text-align:center}
+.jk-top .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jk-top .sc{font-family:var(--mono);font-size:14px}

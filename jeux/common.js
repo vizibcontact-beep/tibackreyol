@@ -59,5 +59,38 @@ const JK={
   untilTomorrow(){const now=Date.now()-4*3600e3,next=Date.parse(JK.today())+864e5;const m=Math.max(0,Math.round((next-now)/60000));return `${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')}`;},
   statsHtml(game,labels){const s=JK.stats(game);
     return `<div class="jk-stats"><div><b>${s.played}</b><span>parties</span></div><div><b>${s.played?Math.round(s.won/s.played*100):0} %</b><span>${labels&&labels.won||'réussies'}</span></div><div><b>${s.streak}</b><span>série en cours</span></div><div><b>${s.best}</b><span>meilleure série</span></div></div>`;}
+  ,
+  /* ---------- Compte Ti Bac et classement du jour ---------- */
+  _sbp:null,
+  _script(src){return new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s);});},
+  sb(){
+    if(!JK._sbp)JK._sbp=(async()=>{try{
+      if(!window.supabase)await JK._script('/vendor/supabase.js');
+      if(!window.TIBAC_CONFIG)await JK._script('/config.js');
+      const c=window.TIBAC_CONFIG||{};if(!c.SUPABASE_URL||!window.supabase)return null;
+      return window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_ANON_KEY);
+    }catch(e){return null;}})();
+    return JK._sbp;
+  },
+  /* r = {score, xp, detail} ; à appeler une fois le panneau de fin affiché (défi du jour uniquement) */
+  async board(game,r){
+    const end=document.getElementById('end');if(!end)return;
+    const el=document.createElement('div');el.className='jk-board';el.innerHTML='<h3>🏆 Classement du jour</h3><p class="muted">Chargement…</p>';
+    const cta=end.querySelector('.cta');cta?end.insertBefore(el,cta):end.appendChild(el);
+    const sb=await JK.sb();
+    if(!sb){el.innerHTML='<h3>🏆 Classement du jour</h3><p class="muted">Classement indisponible pour le moment (pas de connexion ?).</p>';return;}
+    let session=null;try{session=(await sb.auth.getSession()).data.session;}catch(e){}
+    let info='';
+    const sentKey='sent_'+game,sent=JK.load(sentKey,{});
+    if(session&&r&&sent.day!==JK.today()){
+      try{const {data,error}=await sb.rpc('jk_submit',{p_game:game,p_score:Math.round(r.score||0),p_xp:Math.round(r.xp||0),p_detail:String(r.detail||'').slice(0,120)});
+        if(!error&&data&&!data.error){JK.save(sentKey,{day:JK.today(),res:data});sent.day=JK.today();sent.res=data;}}catch(e){}
+    }
+    if(session&&sent.res){const d=sent.res;info=`<p class="jk-gain">${d.xp>0?`<b>+${d.xp} point${d.xp>1?'s':''}</b> ajouté${d.xp>1?'s':''} à ton niveau Ti Bac · `:''}Tu es <b>${d.rank}<sup>${d.rank===1?'er':'e'}</sup></b> sur ${d.players} joueur${d.players>1?'s':''} aujourd'hui</p>`;}
+    else if(!session)info=`<p class="jk-gain"><a href="/#compte">Connecte-toi sur Ti Bac Kréyol</a> pour apparaître au classement et gagner des points pour ton niveau (même compte).</p>`;
+    let rows=[];try{const {data}=await sb.rpc('jk_top',{p_game:game});rows=data||[];}catch(e){}
+    const medal=i=>['🥇','🥈','🥉'][i]||(i+1)+'.';
+    el.innerHTML=`<h3>🏆 Classement du jour</h3>${info}${rows.length?`<ol class="jk-top">${rows.map((x,i)=>`<li class="${x.me?'me':''}"><span class="rk">${medal(i)}</span><span class="nm">${JK.esc(x.pseudo)}${x.me?' (toi)':''}</span><span class="sc">${JK.esc(x.detail||x.score)}</span></li>`).join('')}</ol>`:'<p class="muted">Personne encore aujourd\'hui : sois le premier !</p>'}`;
+  }
 };
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));

@@ -89,6 +89,7 @@ function end(restored){
   <div class="cta">${daily?'<button class="btn" id="share" type="button">Partager</button>':''}<button class="btn ghost" id="again" type="button">Une autre grille</button></div>`;
   if(daily)$('share').onclick=()=>JK.share(txt);
   $('again').onclick=()=>{$('end').hidden=true;newGame(false);};
+  if(daily)JK.board('mele_'+level,{score:Math.max(0,36000-s),xp:{easy:4,normal:6,hard:8}[level],detail:tm});
 }
 JK.header('Mo mélé','🔎');
 bindGrid();

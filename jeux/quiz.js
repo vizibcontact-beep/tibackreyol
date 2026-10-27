@@ -43,6 +43,7 @@ function runQuiz(cfg){
       <div class="cta">${daily?'<button class="btn" id="share" type="button">Partager</button>':''}<button class="btn ghost" id="again" type="button">${daily?'Rejouer (série au hasard)':'Encore une série'}</button></div>`;
     if(daily)$('share').onclick=()=>JK.share(txt);
     $('again').onclick=()=>start(false);
+    if(daily)JK.board(cfg.key,{score,xp:Math.round(good/Q.length*10),detail:`${good}/${Q.length} · ${score} pts`});
   }
   start(true);
 }

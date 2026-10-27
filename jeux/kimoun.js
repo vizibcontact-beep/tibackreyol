@@ -49,6 +49,7 @@ function end(restored,won){
     <div class="cta">${daily?'<button class="btn" id="share" type="button">Partager</button>':''}<button class="btn ghost" id="again" type="button">Une autre personnalité</button></div>`;
   if(daily)$('share').onclick=()=>JK.share(txt);
   $('again').onclick=()=>start(false);
+  if(daily)JK.board('km',{score:pts,xp:won?pts*2+2:1,detail:won?`${shown}ᵉ indice`:'pas trouvé'});
 }
 JK.header('Ki moun ?','🕵🏾');
 start(true);

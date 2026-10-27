@@ -360,7 +360,7 @@ let SESSION=null,UID=null,READY=false,RECOVERY=false;
 let MEP=null,MEPLOADED=false,FRIENDSHIPS=[],MYMATCHES=[],INVITES=[],TOP=[],TOPW=[],PCACHE={},PFETCH={};
 let MYREPORTS=[],ALLREPORTS=[],MYDAILY=null,MYDAILY_LOADED=false,EARNED=null;
 let CURRENT=null,PENDING_CODE=null,AWARDING={},CELEBRATED={};
-{const h=(location.hash||'').replace('#','').toUpperCase();if(['DEFI','AMIS','REGLES','LEGAL','JOUER','ENLIGNE','CLASSEMENT'].includes(h)){tab=h.toLowerCase();history.replaceState(null,'',location.pathname);}else if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;
+{const h=(location.hash||'').replace('#','').toUpperCase();if(['DEFI','AMIS','REGLES','LEGAL','JOUER','ENLIGNE','CLASSEMENT','COMPTE'].includes(h)){tab=h.toLowerCase();history.replaceState(null,'',location.pathname);}else if(/^[A-Z0-9]{5}$/.test(h))PENDING_CODE=h;
  else{try{const k=localStorage.getItem('tibac_pending');if(k&&/^[A-Z0-9]{5}$/.test(k))PENDING_CODE=k;}catch(e){}}}
 const URLAUTH=location.hash+location.search;
 const FROM_EMAIL=/access_token=|type=signup|type=email|type=magiclink/.test(URLAUTH);
@@ -645,6 +645,7 @@ function renderStats(){
 function weekKey(){const d=new Date(Date.now()-4*3600e3);d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);}
 function weekPts(p){return p&&p.week_key===weekKey()?(p.week_xp||0):0;}
 function weekUpd(add){return {week_key:weekKey(),week_xp:weekPts(MEP)+add};}
+async function freshXp(){try{const {data}=await SB.from('profiles').select('xp,week_xp,week_key').eq('id',UID).maybeSingle();if(data)MEP={...MEP,...data};}catch(e){}}
 function recordStats(t,found){
   if(!SB||!UID)return;const th=prep(t);
   SB.rpc('record_answers',{p_theme:t,p_names:found.map(i=>th.answers[i]&&th.answers[i].name).filter(Boolean)}).then(()=>{},()=>{});
@@ -652,6 +653,7 @@ function recordStats(t,found){
 async function recordRound(t,found,pts,more){
   recordStats(t,found);
   if(!MEP||!SB)return;
+  await freshXp();
   const th=prep(t),perfect=found.length===th.answers.length?1:0,r3=found.filter(i=>th.answers[i]&&th.answers[i].pts===3).length;
   const best={...(MEP.best||{})};best[t]=Math.max(best[t]||0,found.length);
   const now=new Date().toISOString();
@@ -1037,6 +1039,7 @@ function shareLink(code){return `${location.origin}${location.pathname}#${code}`
 async function awardMatch(code,res){
   if(!MEP||AWARDING[code]||(MEP.counted||[]).includes(code))return;
   AWARDING[code]=1;
+  await freshXp();
   const bonus=res==='win'?XP_WIN:res==='tie'?XP_TIE:XP_PLAY;
   const upd={xp:(MEP.xp||0)+bonus,...weekUpd(bonus),games:(MEP.games||0)+1,wins:(MEP.wins||0)+(res==='win'?1:0),counted:[...(MEP.counted||[]),code].slice(-200)};
   try{await q(SB.from('profiles').update(upd).eq('id',UID));MEP={...MEP,...upd};checkBadges();}catch(e){AWARDING[code]=0;}

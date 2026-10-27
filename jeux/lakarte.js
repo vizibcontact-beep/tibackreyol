@@ -56,6 +56,7 @@ function end(restored){
     <div class="cta">${daily?'<button class="btn" id="share" type="button">Partager</button>':''}<button class="btn ghost" id="again" type="button">Nouvelle partie</button></div>`;
   if(daily)$('share').onclick=()=>JK.share(txt);
   $('again').onclick=()=>start(false);
+  if(daily)JK.board('lk_'+T,{score,xp:Math.round(score/max*10),detail:`${score} pts`});
 }
 function terrButtons(){
   $('terr').innerHTML=Object.entries(CARTES).map(([k,c])=>`<button type="button" data-t="${k}" aria-pressed="${k===T}">${c.name}</button>`).join('');
