@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lakarté · place les communes sur la carte</title>
+<meta name="description" content="Martinique, Guadeloupe, Guyane : touche la carte là où se trouve la commune demandée. Plus tu es près, plus tu marques !">
+<link rel="canonical" href="https://tibackreyol.vercel.app/jeux/lakarte.html">
+<meta name="theme-color" content="#0C262E">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Jeu Kréyol">
+<meta property="og:title" content="Lakarté · place les communes sur la carte">
+<meta property="og:description" content="Martinique, Guadeloupe, Guyane : touche la carte là où se trouve la commune demandée. Plus tu es près, plus tu marques !">
+<meta property="og:url" content="https://tibackreyol.vercel.app/jeux/lakarte.html">
+<meta property="og:image" content="https://tibackreyol.vercel.app/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preload" href="/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/bagel-fat-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/jeux/jeux.css">
+</head>
+<body>
+<main class="wrap" id="app">
+<section class="panel"><div class="seg" id="terr" role="group" aria-label="Territoire"></div><p class="jk-help">Touche la carte à l'endroit où se trouve la commune. <b>100 points</b> si tu tombes dedans, moins si tu es à côté. 10 communes par partie.</p><div id="play" style="display:flex;flex-direction:column;gap:12px"></div></section>
+<section class="panel" id="end" hidden></section>
+<p class="muted" style="font-size:12px;text-align:center">Fond de carte : IGN Admin Express (Licence ouverte Etalab).</p>
+</main>
+<script src="/jeux/common.js"></script>
+<script src="/jeux/cartes.js"></script><script src="/jeux/lakarte.js"></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+/* Jeu Kréyol — styles des petits jeux (en plus de /style.css) */
+html,body{margin:0}
+[hidden]{display:none!important}
+.jk-title{font-family:var(--display);font-size:22px;line-height:1.1;margin:0}
+.jk-title+*{margin-top:0}
+.jk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.jk-stats div{background:var(--card);border-radius:12px;padding:10px 4px;display:flex;flex-direction:column}
+.jk-stats b{font-family:var(--mono);font-size:20px}
+.jk-stats span{font-size:12px;color:var(--mute);line-height:1.2}
+.jk-help{font-size:14px;color:var(--mute);line-height:1.5}
+.jk-help b{color:var(--ink)}
+
+/* ---------- Page d'accueil des jeux ---------- */
+.games{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media (max-width:420px){.games{grid-template-columns:1fr}}
+.game{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:16px;position:relative;transition:transform .1s,border-color .1s}
+.game:hover{border-color:var(--gold);transform:translateY(-2px)}
+.game .ico{font-size:34px;line-height:1}
+.game b{font-family:var(--display);font-weight:400;font-size:21px;line-height:1.1}
+.game span{font-size:14px;color:var(--mute);line-height:1.4}
+.game .tag{position:absolute;top:12px;right:12px;font-size:11px;font-weight:800;border-radius:999px;padding:3px 8px;background:var(--card);color:var(--mute)}
+.game .tag.ok{background:rgba(61,181,127,.2);color:#7FE0B0}
+.game .tag.new{background:var(--gold);color:#2A1C00}
+
+/* ---------- Kréyol Mo (mot du jour) ---------- */
+.mo-grid{display:grid;gap:6px;margin:0 auto;width:100%;max-width:340px}
+.mo-row{display:grid;gap:6px}
+.mo-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:clamp(18px,6vw,28px);border:2px solid var(--line);border-radius:10px;background:var(--bg2);text-transform:uppercase}
+.mo-cell.filled{border-color:var(--mute)}
+.mo-cell.ok{background:var(--green);border-color:var(--green);color:#06261A}
+.mo-cell.in{background:var(--gold);border-color:var(--gold);color:#2A1C00}
+.mo-cell.no{background:#2C4148;border-color:#2C4148;color:#C9D7D9}
+.mo-cell.flip{animation:flip .4s ease both}
+.mo-row.shake{animation:shake .35s}
+@keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.kb{display:flex;flex-direction:column;gap:6px;user-select:none;width:100%;max-width:520px;margin:0 auto}
+.kb div{display:flex;gap:5px;justify-content:center}
+.kb button{flex:1 1 0;min-width:0;height:52px;font:inherit;font-weight:800;font-size:16px;border:0;border-radius:8px;background:var(--card2);color:var(--ink);cursor:pointer;padding:0}
+.kb button.wide{flex:1.6 1 0;font-size:13px}
+.kb button.ok{background:var(--green);color:#06261A}
+.kb button.in{background:var(--gold);color:#2A1C00}
+.kb button.no{background:#24363C;color:#7F9599}
+.mo-def{background:var(--card);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.mo-def b{font-family:var(--display);font-weight:400;font-size:28px;color:var(--gold)}
+
+/* ---------- Mo mélé ---------- */
+.mm-wrap{display:flex;flex-direction:column;gap:12px;align-items:center}
+.mm-grid{display:grid;width:100%;max-width:440px;touch-action:none;user-select:none;-webkit-user-select:none;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:6px;gap:2px}
+.mm-grid span{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:clamp(13px,4.2vw,20px);border-radius:8px;color:var(--ink)}
+.mm-grid span.sel{background:var(--blue);color:#fff}
+.mm-grid span.found{background:rgba(61,181,127,.35);color:#E9FFF4}
+.mm-words{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.mm-words span{font-size:14px;font-weight:700;background:var(--card);border-radius:999px;padding:5px 11px}
+.mm-words span.found{text-decoration:line-through;color:var(--dim);background:transparent;border:1px solid var(--line)}
+.mm-timer{font-family:var(--mono);font-size:18px;color:var(--gold)}
+
+/* ---------- Quiz (vrai/faux, proverbes, ki moun) ---------- */
+.qz-card{background:var(--card);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:150px;justify-content:center}
+.qz-card p.q{font-size:19px;font-weight:700;line-height:1.4}
+.qz-opts{display:flex;flex-direction:column;gap:10px}
+.qz-opts .btn{text-align:left;font-weight:700}
+.qz-opts .btn.right{background:var(--green);color:#06261A;box-shadow:0 4px 0 #23784F}
+.qz-opts .btn.wrong{background:var(--red);color:#fff;box-shadow:0 4px 0 #9E2A20}
+.qz-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qz-bar{height:8px;background:var(--card);border-radius:999px;overflow:hidden}
+.qz-bar i{display:block;height:100%;background:var(--gold);transition:width .3s}
+.qz-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--mute);font-weight:700}
+.qz-expl{font-size:15px;line-height:1.5;color:var(--ink);background:var(--bg2);border-left:4px solid var(--gold);border-radius:8px;padding:10px 12px}
+.clue{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border-radius:12px;padding:10px 12px;font-size:16px;line-height:1.45}
+.clue b{font-family:var(--mono);color:var(--gold);flex:0 0 auto}
+.clue.hide{color:var(--dim);font-style:italic}
+
+/* ---------- Lakarté ---------- */
+.map-box{position:relative;width:100%;background:#0E3C4A;border:1px solid var(--line);border-radius:16px;overflow:hidden;touch-action:manipulation}
+.map-box svg{display:block;width:100%;height:auto}
+.map-box .land{fill:#2E7D5B;stroke:#9ED7B8;stroke-width:.6}
+.map-box .com{fill:#2E7D5B;stroke:#0E3C4A;stroke-width:.4}
+.map-box .guess{fill:var(--gold);stroke:#2A1C00;stroke-width:.6}
+.map-box .target{fill:var(--red);stroke:#fff;stroke-width:.6}
+.map-box .line{stroke:var(--gold);stroke-width:.6;stroke-dasharray:2 2}

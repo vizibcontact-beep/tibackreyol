@@ -267,6 +267,11 @@ function showSetup(){
     <p class="muted">Un nouveau thème chaque jour, le même pour tout le monde, avec son classement et son proverbe créole.</p>
     <button class="btn ghost" id="toDaily" type="button">Relever le défi du jour</button>
   </section>
+  <section class="panel">
+    <h3>Encore plus de jeux</h3>
+    <p class="muted">Kréyol Mo (le mot créole du jour), Mo mélé, Vré ou fo, Konbat Pwovèb, Ki moun ? et Lakarté : découvre la boîte à jeux antillaise.</p>
+    <a class="btn ghost" href="/jeux/">🎲 Tous les jeux Kréyol</a>
+  </section>
   ${installPanel()}`;
   const paintThemes=()=>{const act=activeThemes(settings.terr);if(!byId('tcount'))return;byId('tcount').textContent=`${act.length} thèmes : ceux des territoires choisis, plus les thèmes communs aux Antilles et à la Guyane.`;};
   paintThemes();bindTerr(paintThemes);

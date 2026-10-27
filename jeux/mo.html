@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kréyol Mo · le mot créole du jour</title>
+<meta name="description" content="Devine le mot créole du jour en 6 essais, comme au Wordle. Un nouveau mot chaque jour !">
+<link rel="canonical" href="https://tibackreyol.vercel.app/jeux/mo.html">
+<meta name="theme-color" content="#0C262E">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Jeu Kréyol">
+<meta property="og:title" content="Kréyol Mo · le mot créole du jour">
+<meta property="og:description" content="Devine le mot créole du jour en 6 essais, comme au Wordle. Un nouveau mot chaque jour !">
+<meta property="og:url" content="https://tibackreyol.vercel.app/jeux/mo.html">
+<meta property="og:image" content="https://tibackreyol.vercel.app/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preload" href="/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/bagel-fat-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/jeux/jeux.css">
+</head>
+<body>
+<main class="wrap" id="app">
+<section class="panel"><p class="jk-help">Devine le <b>mot créole du jour</b> en 6 essais. Après chaque essai, les couleurs t'aident : <b style="color:#7FE0B0">vert</b> = bonne lettre bien placée, <b style="color:var(--gold)">jaune</b> = la lettre est dans le mot mais ailleurs, gris = absente. Les accents ne comptent pas.</p><p class="muted" id="len" style="text-align:center;font-weight:700"></p><div class="mo-grid" id="grid"></div></section>
+<section class="panel" id="end" hidden></section>
+<div class="kb" id="kb"></div>
+</main>
+<script src="/jeux/common.js"></script>
+<script src="/jeux/mo.js"></script>
+</body>
+</html>
