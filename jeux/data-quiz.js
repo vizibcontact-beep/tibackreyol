@@ -71,7 +71,24 @@ const VF=[
  {s:"Le sirop de batterie est obtenu en cuisant longuement le jus de canne.",v:1,e:"Vrai."},
  {s:"Dans les contes, Compère Lapin gagne souvent contre Compère Zamba grâce à sa ruse.",v:1,e:"Vrai : il est petit mais très malin."},
  {s:"La Dominique se trouve entre la Martinique et la Guadeloupe.",v:1,e:"Vrai : on la surnomme l'île nature."},
- {s:"La Dominique se trouve entre la Martinique et Sainte-Lucie.",v:0,e:"Faux : elle est entre la Martinique et la Guadeloupe."}
+ {s:"La Dominique se trouve entre la Martinique et Sainte-Lucie.",v:0,e:"Faux : elle est entre la Martinique et la Guadeloupe."},
+ {s:"En Guadeloupe, l'abolition de l'esclavage est fêtée le 27 mai.",v:1,e:"Vrai : le 27 mai en Guadeloupe, le 22 mai en Martinique, le 10 juin en Guyane."},
+ {s:"En Guyane, l'abolition de l'esclavage est fêtée le 10 juin.",v:1,e:"Vrai : chaque territoire a sa date, liée à l'arrivée de la nouvelle de l'abolition en 1848."},
+ {s:"Le Centre spatial guyanais est installé à Saint-Laurent-du-Maroni.",v:0,e:"Faux : le Centre spatial guyanais est à Kourou."},
+ {s:"Le Rocher du Diamant, au large de la Martinique, a été enregistré par la marine anglaise comme un navire de guerre.",v:1,e:"Vrai : en 1804, les Anglais l'ont occupé et armé de canons sous le nom de « HMS Diamond Rock »."},
+ {s:"En Guadeloupe, la Rivière Salée sépare Grande-Terre et Basse-Terre.",v:1,e:"Vrai : ce n'est pas une rivière mais un étroit bras de mer entre les deux « ailes du papillon »."},
+ {s:"Grande-Terre est la partie montagneuse de la Guadeloupe.",v:0,e:"Faux : c'est Basse-Terre qui est montagneuse (avec la Soufrière) ; Grande-Terre est plate et calcaire."},
+ {s:"Saint-Pierre était surnommée le « Petit Paris des Antilles ».",v:1,e:"Vrai : avant 1902, c'était la ville la plus animée et la plus riche de la Martinique."},
+ {s:"Le zouk est né dans les années 1950.",v:0,e:"Faux : le zouk est né au début des années 1980, porté par Kassav'."},
+ {s:"Le bèlè est une tradition de chant et de danse de Martinique, accompagnée au tambour.",v:1,e:"Vrai : on danse le bèlè en cercle ou en quadrille, au son du tanbou bèlè et du ti-bwa."},
+ {s:"Lilian Thuram est né en Martinique.",v:0,e:"Faux : il est né à Pointe-à-Pitre, en Guadeloupe, en 1972."},
+ {s:"Le ti-punch se prépare avec du rhum, du citron vert et du sucre de canne.",v:1,e:"Vrai : « chacun prépare sa propre mort », dit-on, en dosant soi-même rhum et sucre."},
+ {s:"Le Maroni sépare la Guyane du Suriname.",v:1,e:"Vrai : à l'ouest, le Maroni fait frontière avec le Suriname ; à l'est, l'Oyapock avec le Brésil."},
+ {s:"L'Oyapock sépare la Guyane du Brésil.",v:1,e:"Vrai : un pont relie Saint-Georges de l'Oyapock à Oiapoque, côté brésilien."},
+ {s:"Fort-de-France s'appelait autrefois Fort-Royal.",v:1,e:"Vrai : la ville a pris le nom de Fort-de-France au début du XIXe siècle."},
+ {s:"Basse-Terre est la commune la plus peuplée de la Guadeloupe.",v:0,e:"Faux : Basse-Terre est la préfecture, mais la commune la plus peuplée est Les Abymes."},
+ {s:"Les Saintes, Marie-Galante et La Désirade font partie de l'archipel de la Guadeloupe.",v:1,e:"Vrai : on les appelle les « îles du Sud » et « dépendances » de la Guadeloupe."},
+ {s:"Teddy Riner est né en Guadeloupe.",v:1,e:"Vrai : il est né aux Abymes en 1989."}
 ];
 
 /* Konbat Pwovèb : début / fin / sens. ok:true = proverbe déjà vérifié dans Ti Bac Kréyol. */
@@ -117,5 +134,13 @@ const KIMOUN=[
  {n:"Saint-John Perse",al:["perse","saint john perse","alexis leger"],c:["Né à Pointe-à-Pitre en 1887.","Diplomate, il s'appelait en réalité Alexis Leger.","Il a écrit le recueil Éloges.","Poète, il a reçu le prix Nobel de littérature en 1960."]},
  {n:"Henri Salvador",al:["salvador"],c:["Né à Cayenne en 1917.","Guitariste, il a joué avec Django Reinhardt.","Il a chanté Juanita Banana et Zorro est arrivé.","Il a fait un grand retour en 2000 avec l'album Chambre avec vue et la chanson Jardin d'hiver."]},
  {n:"Christiane Taubira",al:["taubira"],c:["Née à Cayenne en 1952.","Elle a été ministre de la Justice.","Une loi de 2001 qui porte son nom reconnaît la traite et l'esclavage comme crime contre l'humanité.","Elle a fait voter le mariage pour tous en 2013."]},
- {n:"Louis Delgrès",al:["delgres"],c:["Né à Saint-Pierre, en Martinique, en 1766.","Officier, il a combattu en Guadeloupe en 1802.","Il s'est opposé au rétablissement de l'esclavage voulu par Napoléon.","Il est mort à Matouba en lançant « Vivre libre ou mourir ! »."]}
+ {n:"Louis Delgrès",al:["delgres"],c:["Né à Saint-Pierre, en Martinique, en 1766.","Officier, il a combattu en Guadeloupe en 1802.","Il s'est opposé au rétablissement de l'esclavage voulu par Napoléon.","Il est mort à Matouba en lançant « Vivre libre ou mourir ! »."]},
+ {n: "Wendie Renard", al: ["renard", "wendie"], c: ["Sportive née en Martinique en 1990.", "À 16 ans, elle quitte son île pour un centre de formation en métropole.", "Défenseure centrale de 1,87 m, redoutable de la tête.", "Capitaine de l'équipe de France de football et de l'Olympique lyonnais, octuple vainqueur de la Ligue des champions."]},
+ {n: "Christine Arron", al: ["arron"], c: ["Sportive née en Guadeloupe en 1973.", "Spécialiste du sprint.", "Championne du monde du relais 4 × 100 m en 2003, à Paris.", "Elle détient le record d'Europe du 100 m : 10 s 73, couru en 1998."]},
+ {n: "Florent Malouda", al: ["malouda"], c: ["Sportif né à Cayenne en 1980.", "Quatre fois champion de France avec Lyon.", "Finaliste de la Coupe du monde 2006 avec l'équipe de France, il a ensuite brillé à Chelsea.", "En 2017, il dispute la Gold Cup avec la sélection de football de la Guyane."]},
+ {n: "Alfred Marie-Jeanne", al: ["marie jeanne", "mariejeanne"], c: ["Homme politique martiniquais né en 1936, ancien instituteur.", "Maire de Rivière-Pilote pendant près de trente ans.", "Fondateur du Mouvement indépendantiste martiniquais (MIM).", "Premier président du conseil exécutif de la Collectivité territoriale de Martinique, en 2015."]},
+ {n: "Serge Letchimy", al: ["letchimy"], c: ["Né à Fort-de-France en 1953, urbaniste de métier.", "Il a mené la réhabilitation du quartier Texaco.", "Il succède à Aimé Césaire à la mairie de Fort-de-France en 2001.", "Élu en 2021 président du conseil exécutif de la Collectivité territoriale de Martinique."]},
+ {n: "Gerty Archimède", al: ["archimede", "gerty"], c: ["Femme politique et avocate née à Morne-à-l'Eau en 1909.", "Militante communiste et féministe, grande figure de l'après-guerre.", "Première femme inscrite au barreau de la Guadeloupe.", "Première femme députée de la Guadeloupe, élue en 1946."]},
+ {n: "Mickaël Piétrus", al: ["pietrus"], c: ["Sportif né aux Abymes en 1982.", "Champion de France de basket avec Pau-Orthez.", "Il joue en NBA et dispute la finale 2009 avec le Orlando Magic.", "Surnommé « Air France » pour ses dunks."]},
+ {n: "Jacob Desvarieux", al: ["desvarieux", "jacob"], c: ["Musicien né en 1955, disparu en 2021.", "Guitariste, chanteur et arrangeur, il a grandi entre la Guadeloupe, le Sénégal et la métropole.", "En 1979, il fonde un groupe avec Pierre-Édouard Décimus.", "Voix et guitare emblématiques de Kassav'."]}
 ];

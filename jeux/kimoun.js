@@ -8,11 +8,12 @@ function matches(input,p){
   const keys=[p.n,...p.al,p.n.split(' ').slice(-1)[0]].map(key);
   return keys.some(x=>x===k||(k.length>=6&&lev(k,x)<=(k.length>=10?2:1)));
 }
-const ORDER=JK.shuffle(KIMOUN.map((_,i)=>i),JK.rng('ki-moun'));
+const KPOOL=JK.today()<'2026-10-28'?KIMOUN.slice(0,22):KIMOUN;
+const ORDER=JK.shuffle(KPOOL.map((_,i)=>i),JK.rng('ki-moun'));
 let P,shown=1,tries=[],daily=true,over=false,total=JK.load('km_free',{pts:0,n:0});
 function start(isDaily){
   daily=isDaily;over=false;tries=[];shown=1;$('end').hidden=true;
-  if(isDaily){const n=ORDER.length;P=KIMOUN[ORDER[((JK.dayNumber()%n)+n)%n]];
+  if(isDaily){const n=ORDER.length;P=KPOOL[ORDER[((JK.dayNumber()%n)+n)%n]];
     const sv=JK.load('km',{});if(sv.day===JK.today()){shown=sv.shown;tries=sv.tries||[];if(sv.over){render();return end(true,sv.won);}}}
   else P=JK.pick(KIMOUN.filter(x=>x!==P));
   render();
