@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wari · le jeu de graines contre l'ordinateur</title>
+<meta name="description" content="Joue au wari (awalé), le jeu de semailles traditionnel, contre l'ordinateur : 3 niveaux, du Ti moun au Fò.">
+<link rel="canonical" href="https://tibackreyol.vercel.app/jeux/wari.html">
+<meta name="theme-color" content="#0C262E">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Jeu Kréyol">
+<meta property="og:title" content="Wari · le jeu de graines contre l'ordinateur">
+<meta property="og:description" content="Joue au wari (awalé), le jeu de semailles traditionnel, contre l'ordinateur : 3 niveaux, du Ti moun au Fò.">
+<meta property="og:url" content="https://tibackreyol.vercel.app/jeux/wari.html">
+<meta property="og:image" content="https://tibackreyol.vercel.app/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preload" href="/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/bagel-fat-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/jeux/jeux.css">
+</head>
+<body>
+<main class="wrap" id="app">
+<section class="panel"><div class="seg" id="seg" role="group" aria-label="Niveau"></div><div id="play" style="display:flex;flex-direction:column;gap:12px"></div><details class="jk-help"><summary><b>Les règles</b></summary><p>Tu as les 6 trous du bas, l'ordinateur ceux du haut. À ton tour, prends toutes les graines d'un de tes trous et sème-les une par une dans les trous suivants, dans le sens inverse des aiguilles d'une montre.</p><p>Si ta dernière graine tombe chez l'adversaire et que le trou contient alors <b>2 ou 3 graines</b>, tu les prends, ainsi que celles des trous précédents qui ont aussi 2 ou 3 graines.</p><p>Tu dois toujours laisser des graines à jouer à l'adversaire, et tu ne peux pas lui prendre toutes ses graines d'un coup. Le premier à <b>25 graines</b> gagne.</p></details></section>
+<section class="panel" id="end" hidden></section>
+</main>
+<script src="/jeux/common.js"></script>
+<script src="/jeux/wari.js"></script>
+</body>
+</html>

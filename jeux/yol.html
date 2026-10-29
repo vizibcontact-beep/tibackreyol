@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Woulé yol · la course de yole ronde</title>
+<meta name="description" content="Garde la yole ronde en équilibre en déplaçant l'équipage sur les bois dressés, et boucle la course le plus vite possible.">
+<link rel="canonical" href="https://tibackreyol.vercel.app/jeux/yol.html">
+<meta name="theme-color" content="#0C262E">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Jeu Kréyol">
+<meta property="og:title" content="Woulé yol · la course de yole ronde">
+<meta property="og:description" content="Garde la yole ronde en équilibre en déplaçant l'équipage sur les bois dressés, et boucle la course le plus vite possible.">
+<meta property="og:url" content="https://tibackreyol.vercel.app/jeux/yol.html">
+<meta property="og:image" content="https://tibackreyol.vercel.app/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preload" href="/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/bagel-fat-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/jeux/jeux.css">
+</head>
+<body>
+<main class="wrap" id="app">
+<section class="panel" style="padding:10px"><canvas id="cv" class="yol-cv" aria-label="Course de yole : garde le bateau droit"></canvas><div class="yol-ctl"><button class="btn" id="left" type="button" aria-label="Équipage à gauche">◀ Gauche</button><button class="btn" id="right" type="button" aria-label="Équipage à droite">Droite ▶</button></div><p class="muted" id="daynote" style="text-align:center;font-size:13px;margin:8px 0 0"></p></section>
+<section class="panel" id="end" hidden></section>
+<section class="panel"><p class="jk-help">Le vent fait pencher la yole : maintiens <b>◀</b> ou <b>▶</b> (ou touche le côté de l'écran, ou les flèches du clavier) pour envoyer l'équipage sur les bois dressés, de l'autre côté. Reste dans le <b style="color:#7FE0B0">vert</b> pour aller vite. Attention aux <b>rafales</b> (l'eau devient plus sombre) et aux <b>virements de bord</b> : le vent change de côté. Trop penché, tu chavires et tu perds 3 secondes. Même vent pour tout le monde chaque jour.</p></section>
+</main>
+<script src="/jeux/common.js"></script>
+<script src="/jeux/yol.js"></script>
+</body>
+</html>
