@@ -6,7 +6,7 @@ function runQuiz(cfg){
   let Q=[],i=0,score=0,marks=[],timer=null,left=0,daily=true,locked=false;
   function start(isDaily){
     daily=isDaily;const r=JK.rng(isDaily?cfg.key+'-'+JK.today():Math.random());
-    Q=cfg.build(r).slice(0,cfg.n);i=0;score=0;marks=[];$('end').hidden=true;$('play').hidden=false;
+    Q=cfg.build(r,isDaily).slice(0,cfg.n);i=0;score=0;marks=[];$('end').hidden=true;$('play').hidden=false;
     const sv=JK.load(cfg.key,{});
     if(isDaily&&sv.day===JK.today()&&sv.done){score=sv.score;marks=sv.marks;return end(true);}
     show();
@@ -16,7 +16,7 @@ function runQuiz(cfg){
     $('play').innerHTML=`<div class="qz-top"><span>Question ${i+1} / ${Q.length}</span><span>⭐ ${score} pts</span></div>
       <div class="qz-bar" aria-hidden="true"><i id="tbar" style="width:100%"></i></div>
       <div class="qz-card"><p class="q">${q.q}</p></div>
-      <div class="${q.two?'qz-two':'qz-opts'}" id="opts">${q.opts.map((o,k)=>`<button class="btn ${q.two?'':'ghost'}" type="button" data-k="${k}" ${q.two&&k===1?'style="background:var(--red);color:#fff;box-shadow:0 4px 0 #9E2A20"':''}>${o}</button>`).join('')}</div>
+      <div class="${q.two?'qz-two':'qz-opts'}" id="opts">${q.opts.map((o,k)=>`<button class="btn ${q.two?'':'ghost'}" type="button" data-k="${k}" ${q.two&&k===1?'style="background:#B83227;color:#fff;box-shadow:0 4px 0 #7E1E16"':''}>${o}</button>`).join('')}</div>
       <div id="after"></div>`;
     $('opts').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>answer(+b.dataset.k));
     left=cfg.time;clearInterval(timer);const t0=Date.now();
@@ -27,7 +27,7 @@ function runQuiz(cfg){
     const pts=good?10+Math.max(0,Math.round(left)):0;score+=pts;marks.push(good?1:0);
     if(good)JK.good();else JK.bad();
     $('opts').querySelectorAll('[data-k]').forEach(b=>{const n=+b.dataset.k;b.disabled=true;b.style.opacity=1;if(n===q.ok)b.classList.add('right');else if(n===k)b.classList.add('wrong');});
-    $('after').innerHTML=`<p class="qz-expl"><b>${k<0?'⏰ Temps écoulé ! ':good?`✅ Bravo ! +${pts} pts. `:'❌ Raté. '}</b>${q.expl}</p>
+    $('after').innerHTML=`<p class="qz-expl"><b>${k<0?'⏰ Temps écoulé ! ':good?`✅ Bravo ! +${pts} pts. `:'🙈 '+JK.oops()+' '}</b><span class="kz">💡 An ti kout zyé</span>${q.expl}</p>
       <button class="btn wide" id="next" type="button">${i+1<Q.length?'Question suivante':'Voir mon score'}</button>`;
     $('next').onclick=()=>{i++;if(i<Q.length)show();else end(false);};$('next').focus();
   }
@@ -46,4 +46,5 @@ function runQuiz(cfg){
     if(daily)JK.board(cfg.key,{score,xp:Math.round(good/Q.length*10),detail:`${good}/${Q.length} · ${score} pts`});
   }
   start(true);
+  return {start};
 }

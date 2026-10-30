@@ -135,3 +135,25 @@ html,body{margin:0}
 .yol-cv{width:100%;display:block;border-radius:14px;touch-action:none;user-select:none;-webkit-user-select:none;background:#1C8FB8}
 .yol-ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .yol-ctl .btn{height:58px;font-size:18px;touch-action:none;user-select:none;-webkit-user-select:none}
+
+/* ---------- Titres, confettis, installation, squelettes ---------- */
+h1.jk-title{font-weight:400}
+.jk-h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.15;margin:0;text-wrap:balance}
+.jk-confetti{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.jk-confetti i{position:absolute;top:-20px;border-radius:2px;animation:jkfall linear forwards}
+@keyframes jkfall{to{transform:translate(var(--x),105vh) rotate(var(--r))}}
+.jk-install{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:50;max-width:560px;margin:0 auto;background:var(--bg2);border:1px solid var(--gold);border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+.jk-install>span{font-size:26px}
+.jk-install p{margin:0;flex:1;font-size:14px;line-height:1.35}
+.jk-x{background:transparent;border:0;color:var(--mute);font-size:18px;cursor:pointer;padding:6px;min-width:36px;min-height:36px}
+.jk-skel{display:flex;flex-direction:column;gap:8px}
+.jk-skel i,.game.skel{background:linear-gradient(90deg,var(--card) 0,var(--card2) 50%,var(--card) 100%);background-size:200% 100%;animation:jksk 1.2s infinite}
+.jk-skel i{display:block;height:22px;border-radius:8px}
+.game.skel{min-height:130px;border-color:transparent}
+@keyframes jksk{to{background-position:-200% 0}}
+.jk-me{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;background:var(--card);border-radius:14px;padding:12px 14px;margin-top:12px}
+.jk-me b{font-family:var(--display);font-weight:400;font-size:20px;color:var(--gold)}
+.jk-me .bar{height:8px;border-radius:8px;background:var(--bg2);overflow:hidden;width:100%}
+.jk-me .bar i{display:block;height:100%;background:var(--gold)}
+.jk-me small{color:var(--mute);font-size:13px}
+.qz-expl .kz{display:block;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:2px}

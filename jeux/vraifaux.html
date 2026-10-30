@@ -13,7 +13,10 @@
 <meta property="og:title" content="Vré ou fo ? · le quiz vrai ou faux antillais">
 <meta property="og:description" content="Vrai ou faux sur la Martinique, la Guadeloupe, la Guyane et les îles voisines : 10 questions contre la montre, chaque jour.">
 <meta property="og:url" content="https://tibackreyol.vercel.app/jeux/vraifaux.html">
-<meta property="og:image" content="https://tibackreyol.vercel.app/og-image.png">
+<meta property="og:image" content="https://tibackreyol.vercel.app/og/vraifaux.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
@@ -25,7 +28,7 @@
 </head>
 <body>
 <main class="wrap" id="app">
-<section class="panel"><p class="jk-help">Vrai ou faux ? Réponds avant la fin du chrono : <b>10 points</b> par bonne réponse, plus des points bonus si tu es rapide. Une nouvelle série chaque jour.</p><div id="play" style="display:flex;flex-direction:column;gap:14px"></div></section>
+<section class="panel"><p class="jk-help">Vrai ou faux ? Réponds avant la fin du chrono : <b>10 points</b> par bonne réponse, plus des points bonus si tu es rapide. Une nouvelle série chaque jour, équilibrée entre la Martinique, la Guadeloupe et la Guyane. Pour t'entraîner sur un seul territoire, choisis-le ici (partie libre) :</p><div class="seg" id="terr" role="group" aria-label="Territoire"></div><div id="play" style="display:flex;flex-direction:column;gap:14px"></div></section>
 <section class="panel" id="end" hidden></section>
 </main>
 <script src="/jeux/common.js"></script>

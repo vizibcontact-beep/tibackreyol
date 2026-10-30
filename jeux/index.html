@@ -13,7 +13,10 @@
 <meta property="og:title" content="Jeu Kréyol · la boîte à jeux antillaise">
 <meta property="og:description" content="Petits jeux gratuits sur la culture des Antilles et de la Guyane : petit bac, mot créole du jour, mots mêlés, quiz, proverbes, carte…">
 <meta property="og:url" content="https://tibackreyol.vercel.app/jeux/">
-<meta property="og:image" content="https://tibackreyol.vercel.app/og-image.png">
+<meta property="og:image" content="https://tibackreyol.vercel.app/og/index.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
@@ -25,8 +28,8 @@
 </head>
 <body>
 <main class="wrap" id="app">
-<section class="panel"><h2>La boîte à jeux antillaise</h2><p class="muted">Des petits jeux gratuits sur la culture des Antilles et de la Guyane. Un nouveau défi chaque jour, et ça marche même sans internet une fois ouvert.</p></section>
-<div class="games" id="games"></div>
+<section class="panel"><h1 class="jk-h1">La boîte à jeux antillaise</h1><p class="muted">Des petits jeux gratuits sur la culture des Antilles et de la Guyane. Un nouveau défi chaque jour, et ça marche même sans internet une fois ouvert.</p><div id="me"></div></section>
+<div class="games" id="games" aria-busy="true"><div class="game skel"></div><div class="game skel"></div><div class="game skel"></div><div class="game skel"></div><div class="game skel"></div><div class="game skel"></div></div>
 </main>
 <script src="/jeux/common.js"></script>
 <script src="/jeux/hub.js"></script>
