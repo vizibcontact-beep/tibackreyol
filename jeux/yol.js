@@ -5,7 +5,7 @@ const COURSE=1200,TACKS=[400,800],CAPSIZE=38;
 let cv,ctx,W=360,H=480,raf=0,last=0,run=false,daily=true;
 let st;
 const IMG={};
-function loadImages(){return Promise.all(['decor','yole','yole2','crew1','crew2','bouee'].map(k=>new Promise(ok=>{const im=new Image();im.onload=()=>{IMG[k]=im;ok();};im.onerror=()=>ok();im.src='/jeux/img/yol/'+k+'.webp';})));}
+function loadImages(){return Promise.all(['decor','yole','yole2','crew1','bouee'].map(k=>new Promise(ok=>{const im=new Image();im.onload=()=>{IMG[k]=im;ok();};im.onerror=()=>ok();im.src='/jeux/img/yol/'+k+'.webp';})));}
 function gusts(r){
   /* rafales : début (s), durée (s), force (0.5 à 1) */
   const g=[];let t=3;
@@ -68,7 +68,7 @@ function draw(){
   /* équipage sur les bois dressés */
   const cx=st.c*205;
   for(let i=0;i<4;i++){
-    const x=cx+(i-1.5)*46,foot=(632-PY)+Math.min(1,Math.abs(x)/338)*42,im=i%2?IMG.crew2:IMG.crew1;if(!im)continue;
+    const x=cx+(i-1.5)*46,foot=(632-PY)+Math.min(1,Math.abs(x)/338)*42,im=IMG.crew1;if(!im)continue;
     const ch=138,cw=ch*im.width/im.height;ctx.save();ctx.translate(x,foot);if(st.c<0)ctx.scale(-1,1);ctx.rotate(-st.c*.12);ctx.drawImage(im,-cw/2,-ch,cw,ch);ctx.restore();}
   ctx.restore();
   /* écume */
