@@ -5,7 +5,7 @@ const COURSE=1200,TACKS=[400,800],CAPSIZE=38;
 let cv,ctx,W=360,H=480,raf=0,last=0,run=false,daily=true;
 let st;
 const IMG={};
-function loadImages(){return Promise.all(['decor','yole','yole2','crew1','bouee'].map(k=>new Promise(ok=>{const im=new Image();im.onload=()=>{IMG[k]=im;ok();};im.onerror=()=>ok();im.src='/jeux/img/yol/'+k+'.webp';})));}
+function loadImages(){return Promise.all(['decor','yole','crew1','bouee'].map(k=>new Promise(ok=>{const im=new Image();im.onload=()=>{IMG[k]=im;ok();};im.onerror=()=>ok();im.src='/jeux/img/yol/'+k+'.webp';})));}
 function gusts(r){
   /* rafales : début (s), durée (s), force (0.5 à 1) */
   const g=[];let t=3;
@@ -45,7 +45,7 @@ function flash(m){st.msg=m;st.msgT=2.2;}
 /* ---------- Dessin ---------- */
 function draw(){
   const w=W,h=H,{W:wd,warn,g}=windAt(st.t);
-  const HZ=h*.375; /* ligne d'horizon du décor */
+  const HZ=h*.45; /* ligne d'horizon du décor */
   if(IMG.decor)ctx.drawImage(IMG.decor,0,0,w,h);else{ctx.fillStyle='#1C8FB8';ctx.fillRect(0,0,w,h);}
   /* rafale : eau plus sombre du côté du vent */
   if(g>0||warn>0){const s=st.side,al=Math.max(g*.42,warn*.28);const gr=ctx.createLinearGradient(s>0?0:w,0,s>0?w*.65:w*.35,0);gr.addColorStop(0,`rgba(4,40,70,${al})`);gr.addColorStop(1,'rgba(4,40,70,0)');ctx.fillStyle=gr;ctx.fillRect(0,HZ,w,h-HZ);}
@@ -53,14 +53,15 @@ function draw(){
   ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1.6;
   for(let y=0;y<9;y++){const yy=HZ+10+y*y*5.2,sp=(1+y*.5),off=(st.dist*sp*1.8)%80;ctx.beginPath();
     for(let x=-80;x<w+80;x+=80){const X=x+((y*37)%80)+(y%2?off:-off);ctx.moveTo(X,yy);ctx.quadraticCurveTo(X+6+y,yy-2-y*.3,X+12+y*2,yy);}ctx.stroke();}
-  /* yole adverse au loin */
-  if(IMG.yole2){const rh=h*.10,rw=rh*IMG.yole2.width/IMG.yole2.height,rx=w*(.5+.34*Math.sin(st.t/7+1)),ry=HZ+h*.075+Math.sin(st.wave*1.3)*1.5;
-    ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.sin(st.wave*.9)*.05);ctx.drawImage(IMG.yole2,-rw/2,-rh,rw,rh);ctx.restore();}
   /* bouée qui approche */
   const nextK=[...TACKS,COURSE].find(k=>k>st.dist)||COURSE,prev=[0,...TACKS].filter(k=>k<=st.dist).pop()||0;
   const pr=(st.dist-prev)/(nextK-prev);
-  if(IMG.bouee){const bh=8+pr*pr*h*.16,bw=bh*IMG.bouee.width/IMG.bouee.height,bx=w*(.5+.36*st.side*(.55+pr*.5)),by=HZ+6+pr*pr*h*.30+Math.sin(st.wave*2)*1.5;
-    ctx.drawImage(IMG.bouee,bx-bw/2,by-bh,bw,bh);if(nextK===COURSE&&pr>.2){ctx.fillStyle='#F7C23C';ctx.font='800 12px Figtree, sans-serif';ctx.textAlign='center';ctx.fillText('ARRIVÉE',bx,by-bh-4);}}
+  if(IMG.bouee){const k=pr*pr,bh=10+k*h*.16,bw=bh*IMG.bouee.width/IMG.bouee.height,bx=w*(.5+.36*st.side*(.55+pr*.5)),wl=HZ+h*.02+k*h*.28+Math.sin(st.wave*2)*1.2;
+    /* la base de la bouée est sous l'eau : on la dessine un peu enfoncée, puis l'écume par-dessus */
+    ctx.save();ctx.beginPath();ctx.rect(bx-bw,0,bw*2,wl+bh*.02);ctx.clip();ctx.drawImage(IMG.bouee,bx-bw/2,wl-bh*.86,bw,bh);ctx.restore();
+    ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();ctx.ellipse(bx,wl,bw*.62,Math.max(1.5,bh*.05),0,0,7);ctx.fill();
+    ctx.fillStyle='rgba(4,60,90,.25)';ctx.beginPath();ctx.ellipse(bx,wl+bh*.06,bw*.55,Math.max(1,bh*.04),0,0,7);ctx.fill();
+    if(nextK===COURSE&&pr>.2){ctx.fillStyle='#F7C23C';ctx.font='800 12px Figtree, sans-serif';ctx.textAlign='center';ctx.fillText('ARRIVÉE',bx,wl-bh*.86-4);}}
   /* la yole (vue de l'arrière) : pivot au niveau de l'eau */
   const Y=IMG.yole,sc=h*.80/900,PX=348,PY=770,bob=Math.sin(st.wave*1.7)*2;
   ctx.save();ctx.translate(w/2,h*.87+bob);ctx.rotate(st.a*Math.PI/180);ctx.scale(sc,sc);
