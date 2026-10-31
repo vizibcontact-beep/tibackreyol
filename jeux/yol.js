@@ -4,6 +4,8 @@ const $=id=>document.getElementById(id);
 const COURSE=1200,TACKS=[400,800],CAPSIZE=38;
 let cv,ctx,W=360,H=480,raf=0,last=0,run=false,daily=true;
 let st;
+const IMG={};
+function loadImages(){return Promise.all(['decor','yole','yole2','crew1','crew2','bouee'].map(k=>new Promise(ok=>{const im=new Image();im.onload=()=>{IMG[k]=im;ok();};im.onerror=()=>ok();im.src='/jeux/img/yol/'+k+'.webp';})));}
 function gusts(r){
   /* rafales : début (s), durée (s), force (0.5 à 1) */
   const g=[];let t=3;
@@ -43,42 +45,34 @@ function flash(m){st.msg=m;st.msgT=2.2;}
 /* ---------- Dessin ---------- */
 function draw(){
   const w=W,h=H,{W:wd,warn,g}=windAt(st.t);
-  const sky=ctx.createLinearGradient(0,0,0,h*.42);sky.addColorStop(0,'#4FB3E8');sky.addColorStop(1,'#BDE6F7');
-  ctx.fillStyle=sky;ctx.fillRect(0,0,w,h*.42);
-  /* morne au loin et bouée */
-  ctx.fillStyle='#2E7D5B';ctx.beginPath();ctx.moveTo(0,h*.42);ctx.quadraticCurveTo(w*.25,h*.30,w*.48,h*.40);ctx.quadraticCurveTo(w*.7,h*.33,w,h*.41);ctx.lineTo(w,h*.42);ctx.fill();
-  const sea=ctx.createLinearGradient(0,h*.42,0,h);sea.addColorStop(0,'#1C8FB8');sea.addColorStop(1,'#0B4F6C');
-  ctx.fillStyle=sea;ctx.fillRect(0,h*.42,w,h*.58);
+  const HZ=h*.375; /* ligne d'horizon du décor */
+  if(IMG.decor)ctx.drawImage(IMG.decor,0,0,w,h);else{ctx.fillStyle='#1C8FB8';ctx.fillRect(0,0,w,h);}
   /* rafale : eau plus sombre du côté du vent */
-  if(g>0||warn>0){const s=st.side,al=Math.max(g*.45,warn*.3);const gr=ctx.createLinearGradient(s>0?0:w,0,s>0?w*.6:w*.4,0);gr.addColorStop(0,`rgba(5,30,50,${al})`);gr.addColorStop(1,'rgba(5,30,50,0)');ctx.fillStyle=gr;ctx.fillRect(0,h*.42,w,h*.58);}
-  /* vagues */
-  ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=2;
-  for(let y=0;y<8;y++){const yy=h*.47+y*y*6.5,off=((st.dist*(1+y*.4))%60);ctx.beginPath();for(let x=-60;x<w+60;x+=30){const X=x+(y%2?off:-off)%60;ctx.moveTo(X,yy);ctx.quadraticCurveTo(X+8,yy-4,X+16,yy);}ctx.stroke();}
+  if(g>0||warn>0){const s=st.side,al=Math.max(g*.42,warn*.28);const gr=ctx.createLinearGradient(s>0?0:w,0,s>0?w*.65:w*.35,0);gr.addColorStop(0,`rgba(4,40,70,${al})`);gr.addColorStop(1,'rgba(4,40,70,0)');ctx.fillStyle=gr;ctx.fillRect(0,HZ,w,h-HZ);}
+  /* reflets qui défilent (impression de vitesse) */
+  ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1.6;
+  for(let y=0;y<9;y++){const yy=HZ+10+y*y*5.2,sp=(1+y*.5),off=(st.dist*sp*1.8)%80;ctx.beginPath();
+    for(let x=-80;x<w+80;x+=80){const X=x+((y*37)%80)+(y%2?off:-off);ctx.moveTo(X,yy);ctx.quadraticCurveTo(X+6+y,yy-2-y*.3,X+12+y*2,yy);}ctx.stroke();}
+  /* yole adverse au loin */
+  if(IMG.yole2){const rh=h*.10,rw=rh*IMG.yole2.width/IMG.yole2.height,rx=w*(.5+.34*Math.sin(st.t/7+1)),ry=HZ+h*.075+Math.sin(st.wave*1.3)*1.5;
+    ctx.save();ctx.translate(rx,ry);ctx.rotate(Math.sin(st.wave*.9)*.05);ctx.drawImage(IMG.yole2,-rw/2,-rh,rw,rh);ctx.restore();}
   /* bouée qui approche */
   const nextK=[...TACKS,COURSE].find(k=>k>st.dist)||COURSE,prev=[0,...TACKS].filter(k=>k<=st.dist).pop()||0;
-  const pr=(st.dist-prev)/(nextK-prev);const by=h*.43+pr*pr*h*.25,bs=3+pr*14;
-  ctx.fillStyle=nextK===COURSE?'#F7C23C':'#E2483D';ctx.beginPath();ctx.arc(w*(.5+.32*st.side*(1-pr*.3)),by,bs,0,7);ctx.fill();
-  /* la yole (vue de l'arrière) */
-  ctx.save();ctx.translate(w/2,h*.80);ctx.rotate(st.a*Math.PI/180);
-  /* voile madras */
-  ctx.save();ctx.beginPath();ctx.moveTo(-4,-30);ctx.lineTo(-4,-250);ctx.lineTo(st.side*-110,-60);ctx.closePath();ctx.clip();
-  const cols=['#E2483D','#F7C23C','#2FA36B','#F7C23C','#E2483D','#FFFFFF'];
-  for(let i=0;i<14;i++){ctx.fillStyle=cols[i%cols.length];ctx.fillRect(-130,-260+i*18,260,18);}
-  ctx.globalAlpha=.25;ctx.fillStyle='#1A1A1A';for(let i=0;i<10;i++)ctx.fillRect(-130+i*26,-260,6,240);
+  const pr=(st.dist-prev)/(nextK-prev);
+  if(IMG.bouee){const bh=8+pr*pr*h*.16,bw=bh*IMG.bouee.width/IMG.bouee.height,bx=w*(.5+.36*st.side*(.55+pr*.5)),by=HZ+6+pr*pr*h*.30+Math.sin(st.wave*2)*1.5;
+    ctx.drawImage(IMG.bouee,bx-bw/2,by-bh,bw,bh);if(nextK===COURSE&&pr>.2){ctx.fillStyle='#F7C23C';ctx.font='800 12px Figtree, sans-serif';ctx.textAlign='center';ctx.fillText('ARRIVÉE',bx,by-bh-4);}}
+  /* la yole (vue de l'arrière) : pivot au niveau de l'eau */
+  const Y=IMG.yole,sc=h*.80/900,PX=348,PY=770,bob=Math.sin(st.wave*1.7)*2;
+  ctx.save();ctx.translate(w/2,h*.87+bob);ctx.rotate(st.a*Math.PI/180);ctx.scale(sc,sc);
+  if(Y)ctx.drawImage(Y,-PX,-PY);
+  /* équipage sur les bois dressés */
+  const cx=st.c*205;
+  for(let i=0;i<4;i++){
+    const x=cx+(i-1.5)*46,foot=(632-PY)+Math.min(1,Math.abs(x)/338)*42,im=i%2?IMG.crew2:IMG.crew1;if(!im)continue;
+    const ch=138,cw=ch*im.width/im.height;ctx.save();ctx.translate(x,foot);if(st.c<0)ctx.scale(-1,1);ctx.rotate(-st.c*.12);ctx.drawImage(im,-cw/2,-ch,cw,ch);ctx.restore();}
   ctx.restore();
-  ctx.strokeStyle='#5B3A1A';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-4,-20);ctx.lineTo(-4,-255);ctx.stroke();
-  /* coque */
-  ctx.fillStyle='#F4F1E8';ctx.beginPath();ctx.moveTo(-70,-30);ctx.quadraticCurveTo(0,40,70,-30);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#E2483D';ctx.beginPath();ctx.moveTo(-70,-30);ctx.lineTo(70,-30);ctx.lineTo(64,-22);ctx.lineTo(-64,-22);ctx.fill();
-  /* bois dressés (perches) + équipage */
-  ctx.strokeStyle='#8B5A2B';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(-150,-36);ctx.lineTo(150,-36);ctx.stroke();
-  const cx=st.c*92;
-  for(let i=0;i<4;i++){const x=cx+(i-1.5)*16;ctx.fillStyle=['#2B1A10','#3B2416','#2B1A10','#4A2C1A'][i];
-    ctx.beginPath();ctx.arc(x,-66,7,0,7);ctx.fill();ctx.fillRect(x-6,-60,12,22);
-    ctx.fillStyle=['#F7C23C','#2FA36B','#E2483D','#FFFFFF'][i];ctx.fillRect(x-6,-58,12,10);}
-  ctx.restore();
-  /* écume au bord de la coque */
-  ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.ellipse(w/2,h*.83,80+st.v*2,8,0,0,7);ctx.fill();
+  /* écume */
+  ctx.fillStyle='rgba(255,255,255,.55)';ctx.beginPath();ctx.ellipse(w/2,h*.87+bob+6,60+st.v*2.2,6,0,0,7);ctx.fill();
   /* HUD : inclinaison */
   const mx=w/2,my=28,R=120;
   ctx.fillStyle='rgba(12,38,46,.72)';roundRect(mx-R-14,8,2*R+28,44,12);ctx.fill();
@@ -143,4 +137,4 @@ JK.header('Woulé yol','⛵');
 setup();
 const sv=JK.load('yol',{});
 if(sv.day===JK.today())$('daynote').textContent=`Ta course du jour : ${Math.floor(sv.best/60)} min ${(sv.best%60).toFixed(1).replace('.',',')} s. Tu peux rejouer pour t'entraîner (seule la première compte).`;
-reset(true);startLoop();
+reset(true);startLoop();loadImages();
