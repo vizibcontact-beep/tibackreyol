@@ -839,3 +839,9 @@ T('GP',"Plantes envahissantes interdites en Guadeloupe",["Tulipier du Gabon|tuli
  ["Depuis un arrêté du 9 août 2019, il est interdit en Guadeloupe d'introduire, de transporter, de vendre ou même de garder chez soi les plantes de cette liste.",
   "Les espèces exotiques envahissantes sont considérées comme la quatrième cause de perte de biodiversité dans le monde.",
   "Certaines plantes de cette liste ne poussent pas encore en Guadeloupe : elles y sont interdites pour éviter qu'elles passent ensuite vers l'Europe."]);
+
+/* Signalements des joueurs traités le 04/11/2026 */
+addAns("Musées et lieux culturels de Martinique",["*Musée du Père Pinchon|musee pere pinchon,pere pinchon,musee d'histoire naturelle"]);
+addAns("Espèces de la mangrove",["*Crabe de palétuvier|crabe de paletuviers,crabe des paletuviers,aratus"]);
+addAlias("Produits locaux de Martinique","Banane",["banane jaune","fig jaune","bannann"]);
+addAns("Produits locaux de Martinique",["*Nougat pistache|nougat pistaches,nougat cacahuete,caramel pistache,tablette pistache"]);
