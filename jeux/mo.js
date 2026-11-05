@@ -60,7 +60,7 @@ function finish(restored){
   done=true;const won=rows[rows.length-1]===ANS;
   if(daily&&!restored)JK.record('mo',won,won?rows.length:'x');
   const emo=rows.map(w=>grade(w,ANS).map(r=>r==='ok'?'🟩':r==='in'?'🟨':'⬛').join('')).join('\n');
-  const txt=`Kréyol Mo ${JK.today().split('-').reverse().slice(0,2).join('/')} — ${won?rows.length:'X'}/${TRIES}\n${emo}\nhttps://tibackreyol.vercel.app/jeux/mo.html`;
+  const txt=`Kréyol Mo ${JK.today().split('-').reverse().slice(0,2).join('/')} — ${won?rows.length:'X'}/${TRIES}\n${emo}\nhttps://jeukreyol.fr/jeux/mo.html`;
   $('end').hidden=false;
   $('end').innerHTML=`<div class="mo-def"><span class="muted">${won?(rows.length<=2?'Mannifik ! 🔥':rows.length<=4?'Bravo ! 🎉':'Ouf, trouvé ! 😅'):'Dommage… le mot était :'}</span><b>${JK.esc(W[0])}</b><span>= ${JK.esc(W[1])}</span></div>
     ${daily?JK.statsHtml('mo',{won:'trouvés'})+`<p class="muted" style="text-align:center">Prochain mot dans ${JK.untilTomorrow()}</p>`:''}

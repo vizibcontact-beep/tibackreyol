@@ -83,7 +83,7 @@ function check(word){
 function end(restored){
   const s=Math.round(((S.end||Date.now())-S.t0)/1000);const tm=`${Math.floor(s/60)} min ${String(s%60).padStart(2,'0')} s`;
   if(daily&&!restored)JK.record('mele_'+level,true);
-  const txt=`Mo mélé du ${JK.today().split('-').reverse().slice(0,2).join('/')} (${LEVELS[level].label}) — ${S.placed.length} mots en ${tm} ⏱️\nThème : ${S.title}\nhttps://tibackreyol.vercel.app/jeux/mele.html`;
+  const txt=`Mo mélé du ${JK.today().split('-').reverse().slice(0,2).join('/')} (${LEVELS[level].label}) — ${S.placed.length} mots en ${tm} ⏱️\nThème : ${S.title}\nhttps://jeukreyol.fr/jeux/mele.html`;
   $('end').hidden=false;
   $('end').innerHTML=`<h2>Bravo ! 🎉</h2><p>Tous les mots trouvés en <b>${tm}</b>.</p>${daily?JK.statsHtml('mele_'+level,{won:'terminées'}):''}
   <div class="cta">${daily?'<button class="btn" id="share" type="button">Partager</button>':''}<button class="btn ghost" id="again" type="button">Une autre grille</button></div>`;

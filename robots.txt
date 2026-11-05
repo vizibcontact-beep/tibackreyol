@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /404.html
 
-Sitemap: https://tibackreyol.vercel.app/sitemap.xml
+Sitemap: https://jeukreyol.fr/sitemap.xml
