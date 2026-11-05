@@ -73,13 +73,27 @@ const JK={
     const f=document.createElement('footer');f.className='foot-links';
     f.innerHTML='<a href="/jeux/">Tous les jeux</a><a href="/">Ti Bac Kréyol</a><a href="/confidentialite.html">Confidentialité</a><a href="/cgu.html">Conditions d\'utilisation</a><a href="mailto:vizib.contact@gmail.com">Contact</a>';
     document.body.appendChild(f);
-    JK.installBar();
+    setTimeout(()=>{if(JK.consent())JK.installBar();JK.audienceBar();},800);
   },
   /* Temps avant le prochain défi */
   untilTomorrow(){const now=Date.now()-4*3600e3,next=Date.parse(JK.today())+864e5;const m=Math.max(0,Math.round((next-now)/60000));return `${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')}`;},
   statsHtml(game,labels){const s=JK.stats(game);
     return `<div class="jk-stats"><div><b>${s.played}</b><span>parties</span></div><div><b>${s.played?Math.round(s.won/s.played*100):0} %</b><span>${labels&&labels.won||'réussies'}</span></div><div><b>${s.streak}</b><span>série en cours</span></div><div><b>${s.best}</b><span>meilleure série</span></div></div>`;}
   ,
+  /* ---------- Mesure d'audience (Vercel Web Analytics, sans cookie, avec accord) — même choix que Ti Bac ---------- */
+  consent(){try{return localStorage.getItem('tibac_consent');}catch(e){return null;}},
+  analytics(){
+    if(window.__vaLoaded||/localhost|127\.0\.0\.1/.test(location.hostname))return;window.__vaLoaded=true;
+    window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};
+    const sc=document.createElement('script');sc.defer=true;sc.src='/_vercel/insights/script.js';document.head.appendChild(sc);
+  },
+  audienceBar(){
+    const c=JK.consent();if(c){if(c==='yes')JK.analytics();return;}
+    const d=document.createElement('div');d.className='jk-install';d.setAttribute('role','dialog');d.setAttribute('aria-label','Mesure d\'audience');
+    d.innerHTML=`<span aria-hidden="true">🍪</span><p>Ni cookie publicitaire ni traceur. Acceptes-tu une <b>mesure d'audience anonyme et sans cookie</b> ? <a href="/confidentialite.html#cookies" style="color:var(--gold)">En savoir plus</a></p><button class="btn sm" type="button" data-c="yes">Accepter</button><button class="btn ghost sm" type="button" data-c="no">Refuser</button>`;
+    d.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{try{localStorage.setItem('tibac_consent',b.dataset.c);}catch(e){}if(b.dataset.c==='yes')JK.analytics();d.remove();document.body.style.paddingBottom='';setTimeout(()=>JK.installBar(),400);});
+    document.body.appendChild(d);document.body.style.paddingBottom='110px';
+  },
   /* ---------- Bannière « Ajouter à l'écran d'accueil » ---------- */
   _bip:null,
   installBar(){
