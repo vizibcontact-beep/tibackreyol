@@ -65,13 +65,13 @@ const JK={
   header(title,emoji){
     const top=document.createElement('header');top.className='top';
     top.innerHTML=`<div class="madras" aria-hidden="true"></div><div class="topin"><div class="brandrow">
-      <a class="logo" href="/jeux/" style="color:inherit;text-decoration:none">Jeu <span>Kréyol</span></a>
-      <div class="row" style="gap:6px"><button class="btn ghost sm" id="jksnd" type="button" aria-label="Son">${JK.sound?'🔊':'🔇'}</button><a class="btn ghost sm" href="/jeux/">Tous les jeux</a></div></div>
+      <a class="logo" href="/" style="color:inherit;text-decoration:none">Jeu <span>Kréyol</span></a>
+      <div class="row" style="gap:6px"><button class="btn ghost sm" id="jksnd" type="button" aria-label="Son">${JK.sound?'🔊':'🔇'}</button><a class="btn ghost sm" href="/">Tous les jeux</a></div></div>
       ${title?`<h1 class="jk-title">${emoji?`<span aria-hidden="true">${emoji}</span> `:''}${JK.esc(title)}</h1>`:''}</div>`;
     document.body.prepend(top);
     top.querySelector('#jksnd').onclick=function(){JK.toggleSound(this);};
     const f=document.createElement('footer');f.className='foot-links';
-    f.innerHTML='<a href="/jeux/">Tous les jeux</a><a href="/">Ti Bac Kréyol</a><a href="/confidentialite.html">Confidentialité</a><a href="/cgu.html">Conditions d\'utilisation</a><a href="mailto:vizib.contact@gmail.com">Contact</a>';
+    f.innerHTML='<a href="/">Tous les jeux</a><a href="/tibac.html">Ti Bac Kréyol</a><a href="/confidentialite.html">Confidentialité</a><a href="/cgu.html">Conditions d\'utilisation</a><a href="mailto:vizib.contact@gmail.com">Contact</a>';
     document.body.appendChild(f);
     setTimeout(()=>{if(JK.consent())JK.installBar();JK.audienceBar();},800);
   },
@@ -135,7 +135,7 @@ const JK={
         if(!error&&data&&!data.error){JK.save(sentKey,{day:JK.today(),res:data});sent.day=JK.today();sent.res=data;}}catch(e){}
     }
     if(session&&sent.res){const d=sent.res;info=`<p class="jk-gain">${d.xp>0?`<b>+${d.xp} point${d.xp>1?'s':''}</b> ajouté${d.xp>1?'s':''} à ton niveau Ti Bac · `:''}Tu es <b>${d.rank}<sup>${d.rank===1?'er':'e'}</sup></b> sur ${d.players} joueur${d.players>1?'s':''} aujourd'hui</p>`;}
-    else if(!session)info=`<p class="jk-gain"><a href="/#compte">Connecte-toi sur Ti Bac Kréyol</a> pour apparaître au classement et gagner des points pour ton niveau (même compte).</p>`;
+    else if(!session)info=`<p class="jk-gain"><a href="/tibac.html#compte">Connecte-toi (compte Jeu Kréyol)</a> pour apparaître au classement et gagner des points pour ton niveau (même compte).</p>`;
     let rows=[];try{const {data}=await sb.rpc('jk_top',{p_game:game});rows=data||[];}catch(e){}
     const medal=i=>['🥇','🥈','🥉'][i]||(i+1)+'.';
     el.innerHTML=`<h3>🏆 Classement du jour</h3>${info}${rows.length?`<ol class="jk-top">${rows.map((x,i)=>`<li class="${x.me?'me':''}"><span class="rk">${medal(i)}</span><span class="nm">${JK.esc(x.pseudo)}${x.me?' (toi)':''}</span><span class="sc">${JK.esc(x.detail||x.score)}</span></li>`).join('')}</ol>`:'<p class="muted">Personne encore aujourd\'hui : sois le premier !</p>'}`;

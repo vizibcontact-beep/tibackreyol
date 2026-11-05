@@ -1,8 +1,13 @@
 // Ti Bac Kréyol — service worker : ouverture rapide et jeu solo hors connexion
-const VERSION='tibac-v34';
+const VERSION='tibac-v35';
 const SHELL=[
  "./",
  "index.html",
+ "tibac.html",
+ "jeux/common.js",
+ "jeux/jeux.css",
+ "jeux/icones.js",
+ "jeux/portail.js",
  "style.css",
  "app.js",
  "data.js",
@@ -40,7 +45,7 @@ self.addEventListener('fetch',e=>{
   if(req.method!=='GET'||url.origin!==location.origin)return; // Supabase : toujours en direct
   const fresh=req.mode==='navigate'||/\.(js|css|webmanifest)$/.test(url.pathname);
   if(fresh){ // réseau d'abord, copie locale si hors connexion
-    e.respondWith(fetch(req).then(r=>{const cp=r.clone();caches.open(VERSION).then(c=>c.put(req,cp));return r;}).catch(()=>caches.match(req).then(r=>r||caches.match('index.html'))));
+    e.respondWith(fetch(req).then(r=>{const cp=r.clone();caches.open(VERSION).then(c=>c.put(req,cp));return r;}).catch(()=>caches.match(req).then(r=>r||caches.match(/^\/tibac/.test(url.pathname)?'tibac.html':'index.html'))));
   }else{ // images : copie locale d'abord
     e.respondWith(caches.match(req).then(r=>r||fetch(req).then(res=>{const cp=res.clone();caches.open(VERSION).then(c=>c.put(req,cp));return res;})));
   }

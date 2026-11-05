@@ -1,7 +1,7 @@
 {
-  "name": "Ti Bac Kréyol",
-  "short_name": "Ti Bac",
-  "description": "Le petit bac de la culture antillaise.",
+  "name": "Jeu Kréyol",
+  "short_name": "Jeu Kréyol",
+  "description": "Ti Bac Kréyol et les petits jeux sur la culture des Antilles et de la Guyane.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
@@ -25,6 +25,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ti Bac Kréyol",
+      "url": "/tibac.html",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Défi du jour",
+      "url": "/tibac.html#defi"
     }
   ]
 }

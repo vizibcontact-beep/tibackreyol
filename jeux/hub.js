@@ -1,7 +1,7 @@
 'use strict';
 /* Jeu Kréyol — la boîte à jeux */
 const GAMES=[
- {href:'/',ico:'🌴',name:'Ti Bac Kréyol',txt:'Le petit bac de la culture antillaise, seul, à deux ou en ligne.',key:null},
+ {href:'/tibac.html',ico:'🌴',name:'Ti Bac Kréyol',txt:'Le petit bac de la culture antillaise, seul, à deux ou en ligne.',key:null},
  {href:'/jeux/mo.html',ico:'🔤',name:'Kréyol Mo',txt:'Le mot créole du jour, à deviner en 6 essais.',key:'mo'},
  {href:'/jeux/mele.html',ico:'🔎',name:'Mo mélé',txt:'Retrouve les mots cachés dans la grille.',key:['mele_easy','mele_normal','mele_hard']},
  {href:'/jeux/vraifaux.html',ico:'✅',name:'Vré ou fo ?',txt:'Vrai ou faux sur les Antilles et la Guyane, contre la montre.',key:'vf'},
